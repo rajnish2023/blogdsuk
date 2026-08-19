@@ -1,20 +1,40 @@
 import { useState } from "react";
-import { Play, ImageOff } from "lucide-react";
+import { Play, ImageOff, Check } from "lucide-react";
 import DropdownMenu from "./DropdownMenu";
 import { formatBytes, truncate } from "../../utils/format";
 
-export default function MediaCard({ item, onPreview, onCopyLink, onDownload, onDelete }) {
+export default function MediaCard({ item, onPreview, onCopyLink, onDownload, onDelete, isSelected, onToggleSelect, selectionMode }) {
   const [errored, setErrored] = useState(false);
 
   return (
     <div
-      className="group relative flex flex-col overflow-hidden rounded-2xl border border-paper-line bg-paper-card shadow-card transition-all hover:-translate-y-0.5 hover:shadow-pop"
+      className={`group relative flex flex-col overflow-hidden rounded-2xl border bg-paper-card shadow-card transition-all hover:-translate-y-0.5 hover:shadow-pop ${
+        isSelected ? "border-signal ring-1 ring-signal" : "border-paper-line"
+      }`}
     >
-
       <div className="pointer-events-none absolute right-0 top-0 z-10 h-5 w-5 origin-top-right scale-0 bg-signal transition-transform duration-200 group-hover:scale-100" style={{ clipPath: "polygon(100% 0, 0 0, 100% 100%)" }} />
 
+      {/* Selection Checkbox Overlay */}
       <button
-        onClick={() => onPreview(item)}
+        onClick={(e) => {
+          e.stopPropagation();
+          onToggleSelect(item);
+        }}
+        className={`absolute left-2.5 top-2.5 z-20 flex h-5 w-5 items-center justify-center rounded shadow transition-all ${
+          isSelected || selectionMode ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+        } ${isSelected ? "bg-signal text-white ring-2 ring-signal ring-offset-2" : "bg-white border-2 border-paper-line text-transparent hover:border-signal"}`}
+      >
+        <Check size={14} className={isSelected ? "text-white" : "text-ink/30"} strokeWidth={3} />
+      </button>
+
+      <button
+        onClick={() => {
+          if (selectionMode) {
+            onToggleSelect(item);
+          } else {
+            onPreview(item);
+          }
+        }}
         className="relative aspect-square w-full overflow-hidden bg-ink/5"
       >
         {errored ? (
@@ -47,7 +67,10 @@ export default function MediaCard({ item, onPreview, onCopyLink, onDownload, onD
           />
         )}
 
-        <span className="absolute left-2.5 top-2.5 rounded-md bg-ink/60 px-2 py-1 font-mono text-[10px] font-medium uppercase tracking-wide text-white backdrop-blur-sm">
+        {/* Selection Blue Tint */}
+        {isSelected && <div className="absolute inset-0 bg-signal/20 pointer-events-none z-10 transition-colors"></div>}
+
+        <span className="absolute left-2.5 bottom-2.5 rounded-md bg-ink/60 px-2 py-1 font-mono text-[10px] font-medium uppercase tracking-wide text-white backdrop-blur-sm z-20">
           {item.type}
         </span>
       </button>

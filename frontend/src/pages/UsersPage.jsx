@@ -7,6 +7,7 @@ import EditUserModal from "../components/Users/EditUserModal";
 import RoleFormModal from "../components/Users/RoleFormModal";
 import ConfirmDialog from "../components/Shared/ConfirmDialog";
 import Toast from "../components/Shared/Toast";
+import Pagination from "../components/Shared/Pagination";
 import { GallerySkeleton } from "../components/Gallery/GalleryStates";
 import { fetchUsers, createUser, updateUser, setUserStatus, deleteUser } from "../api/userApi";
 import { fetchRoles, fetchPermissions, createRole, updateRole, deleteRole } from "../api/roleApi";
@@ -22,6 +23,9 @@ export default function UsersPage() {
   const [permissions, setPermissions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalUsers, setTotalUsers] = useState(0);
 
   const [showInvite, setShowInvite] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
@@ -38,11 +42,13 @@ export default function UsersPage() {
     setLoading(true);
     try {
       const [userData, roleData, permData] = await Promise.all([
-        fetchUsers({ search }),
+        fetchUsers({ search, page, limit: 10 }),
         fetchRoles(),
         can("roles:view") ? fetchPermissions() : Promise.resolve([]),
       ]);
       setUsers(userData.items);
+      setTotalPages(userData.pages || 1);
+      setTotalUsers(userData.total || 0);
       setRoles(roleData);
       setPermissions(permData);
     } catch (err) {
@@ -50,12 +56,16 @@ export default function UsersPage() {
     } finally {
       setLoading(false);
     }
-  }, [search, can]);
+  }, [search, page, can]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [search]);
 
   useEffect(() => {
     const t = setTimeout(load, search ? 300 : 0);
     return () => clearTimeout(t);
-  }, [load, search]);
+  }, [load, search, page]);
 
   // --- Users ---
   const handleInvite = async (form) => {
@@ -188,6 +198,16 @@ export default function UsersPage() {
           />
         )}
       </main>
+
+      {tab === "team" && (
+        <Pagination
+          page={page}
+          pages={totalPages}
+          total={totalUsers}
+          limit={10}
+          onPageChange={setPage}
+        />
+      )}
 
       {showInvite && (
         <InviteUserModal roles={roles} onClose={() => setShowInvite(false)} onSubmit={handleInvite} />

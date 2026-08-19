@@ -42,9 +42,13 @@ const SYSTEM_ROLES = [
   },
 ];
 
-const run = async () => {
-  await mongoose.connect(process.env.MONGO_URI);
-  console.log("Connected. Seeding roles...");
+const runSeed = async () => {
+  // If not already connected (e.g. running standalone), connect.
+  if (mongoose.connection.readyState === 0) {
+    await mongoose.connect(process.env.MONGO_URI);
+  }
+  
+  console.log("Seeding database...");
 
   const roleDocs = {};
   for (const roleDef of SYSTEM_ROLES) {
@@ -54,15 +58,12 @@ const run = async () => {
       { upsert: true, new: true, setDefaultsOnInsert: true }
     );
     roleDocs[roleDef.name] = role;
-    console.log(`  Role ready: ${role.name}`);
   }
 
   const adminEmail = (process.env.SEED_ADMIN_EMAIL || "admin@dynamicssquare.com").toLowerCase();
   const existingAdmin = await User.findOne({ email: adminEmail });
 
-  if (existingAdmin) {
-    console.log(`Super Admin already exists (${adminEmail}) — skipping user creation.`);
-  } else {
+  if (!existingAdmin) {
     await User.create({
       name: process.env.SEED_ADMIN_NAME || "Super Admin",
       email: adminEmail,
@@ -70,27 +71,31 @@ const run = async () => {
       role: roleDocs["Super Admin"]._id,
       status: "active",
     });
-    console.log(`Super Admin created: ${adminEmail}`);
-    console.log("IMPORTANT: sign in and change this password immediately.");
   }
 
   const existingCategory = await Category.findOne({ name: "General" });
   if (!existingCategory) {
     await Category.create({ name: "General", slug: "general", description: "Uncategorized posts", color: "#3355FF" });
-    console.log("  Default category ready: General");
   }
 
   const existingPageCategory = await PageCategory.findOne({ name: "General" });
   if (!existingPageCategory) {
     await PageCategory.create({ name: "General", slug: "general", description: "Uncategorized pages", color: "#3355FF" });
-    console.log("  Default page category ready: General");
   }
 
-  console.log("Seed complete.");
-  await mongoose.disconnect();
+  return "Database successfully seeded!";
 };
 
-run().catch((err) => {
-  console.error("Seed failed:", err);
-  process.exit(1);
-});
+if (require.main === module) {
+  runSeed()
+    .then(() => {
+      console.log("Seed complete.");
+      mongoose.disconnect();
+    })
+    .catch((err) => {
+      console.error("Seed failed:", err);
+      process.exit(1);
+    });
+}
+
+module.exports = { runSeed };

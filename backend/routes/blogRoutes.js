@@ -9,6 +9,8 @@ const {
   setBlogStatus,
   deleteBlog,
   previewSeoScore,
+  bulkDeleteBlogs,
+  bulkExportBlogs,
 } = require("../controllers/blogController");
 const { protect, authorize } = require("../middleware/auth");
 const validate = require("../middleware/validate");
@@ -44,6 +46,8 @@ router.patch(
 );
 
 router.patch("/:id/status", authorize("blog:publish"), setBlogStatus);
+router.post("/bulk-delete", authorize("blog:delete"), bulkDeleteBlogs);
+router.post("/bulk-export", authorize("blog:view"), bulkExportBlogs);
 router.delete("/:id", authorize("blog:delete"), deleteBlog);
 
 module.exports = router;

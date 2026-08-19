@@ -116,3 +116,31 @@ exports.downloadMedia = async (req, res) => {
     res.status(500).json({ message: err.message || "Download failed" });
   }
 };
+
+exports.bulkDeleteMedia = async (req, res) => {
+  try {
+    const { ids } = req.body;
+    if (!ids || !Array.isArray(ids)) {
+      return res.status(400).json({ message: "Invalid payload. 'ids' array is required." });
+    }
+
+    const items = await Media.find({ _id: { $in: ids } });
+    
+    // Delete files from file system
+    for (const item of items) {
+      const filePath = path.join(__dirname, "..", "uploads", item.fileName);
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
+    }
+
+    // Delete records from database
+    await Media.deleteMany({ _id: { $in: ids } });
+
+    res.status(200).json({ message: `${items.length} files deleted successfully` });
+  } catch (err) {
+    console.error("Bulk delete media error:", err);
+    res.status(500).json({ message: "Failed to delete files" });
+  }
+};
+

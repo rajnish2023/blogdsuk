@@ -66,6 +66,17 @@ app.use("/api/public", publicContactRoutes);
 app.use("/api/public", publicSettingRoutes);
 app.use("/api/settings", settingRoutes);
 
+// Temporary manual seed route for free Render tier
+const { runSeed } = require("./scripts/seed");
+app.get("/api/seed-database-init", async (req, res) => {
+  try {
+    const msg = await runSeed();
+    res.send(`<h1>${msg}</h1><p>You can now log into the admin panel using your SEED_ADMIN_EMAIL.</p>`);
+  } catch (err) {
+    res.status(500).send(`<h1>Seed Failed</h1><p>${err.message}</p>`);
+  }
+});
+
 app.get("/api/health", (req, res) => res.json({ status: "ok", pid: process.pid, uptime: process.uptime() }));
  
 app.use("/api", (req, res) => res.status(404).json({ message: "Not found" }));

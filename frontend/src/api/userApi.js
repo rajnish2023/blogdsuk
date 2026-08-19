@@ -1,7 +1,7 @@
 import client from "./client";
 
-export const fetchUsers = async ({ search = "", role = "", status = "", page = 1 } = {}) => {
-  const { data } = await client.get("/users", { params: { search, role, status, page } });
+export const fetchUsers = async ({ search = "", role = "", status = "", page = 1, limit = 10 } = {}) => {
+  const { data } = await client.get("/users", { params: { search, role, status, page, limit } });
   return data;
 };
 

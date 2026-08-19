@@ -29,3 +29,20 @@ export const deleteBlog = async (id) => {
   const { data } = await client.delete(`/blogs/${id}`);
   return data;
 };
+
+export const bulkDeleteBlogs = async (ids) => {
+  const { data } = await client.post("/blogs/bulk-delete", { ids });
+  return data;
+};
+
+export const bulkExportBlogs = async (ids) => {
+  const { data } = await client.post("/blogs/bulk-export", { ids }, { responseType: "blob" });
+  const url = window.URL.createObjectURL(data);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `blogs_export_${new Date().toISOString().split("T")[0]}.json`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.URL.revokeObjectURL(url);
+};

@@ -36,4 +36,9 @@ export const downloadMedia = async (id, filename) => {
   window.URL.revokeObjectURL(url);
 };
 
+export const bulkDeleteMedia = async (ids) => {
+  const { data } = await client.post("/gallery/bulk-delete", { ids });
+  return data;
+};
+
 export default client;

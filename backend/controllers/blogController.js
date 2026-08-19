@@ -255,3 +255,38 @@ exports.previewSeoScore = async (req, res) => {
     res.status(500).json({ message: "Failed to compute SEO score" });
   }
 };
+
+exports.bulkDeleteBlogs = async (req, res) => {
+  try {
+    const { ids } = req.body;
+    if (!ids || !Array.isArray(ids)) {
+      return res.status(400).json({ message: "Invalid payload. 'ids' array is required." });
+    }
+    await Blog.deleteMany({ _id: { $in: ids } });
+    res.status(200).json({ message: `${ids.length} blogs deleted successfully` });
+  } catch (err) {
+    console.error("Bulk delete blogs error:", err);
+    res.status(500).json({ message: "Failed to delete blogs" });
+  }
+};
+
+exports.bulkExportBlogs = async (req, res) => {
+  try {
+    const { ids } = req.body;
+    if (!ids || !Array.isArray(ids)) {
+      return res.status(400).json({ message: "Invalid payload. 'ids' array is required." });
+    }
+    const blogs = await Blog.find({ _id: { $in: ids } })
+      .populate("author", "name email")
+      .populate("category", "name slug")
+      .lean();
+      
+    // Send as a downloadable JSON file
+    res.setHeader("Content-Disposition", "attachment; filename=blogs_export.json");
+    res.setHeader("Content-Type", "application/json");
+    res.send(JSON.stringify(blogs, null, 2));
+  } catch (err) {
+    console.error("Bulk export blogs error:", err);
+    res.status(500).json({ message: "Failed to export blogs" });
+  }
+};

@@ -48,7 +48,7 @@ exports.listUsers = async (req, res) => {
     const [users, total] = await Promise.all([
       User.find(query)
         .populate("role")
-        .sort({ createdAt: -1 })
+        .sort({ createdAt: -1, _id: 1 })
         .skip((pageNum - 1) * limitNum)
         .limit(limitNum),
       User.countDocuments(query),

@@ -6,6 +6,7 @@ const {
   getMedia,
   deleteMedia,
   downloadMedia,
+  bulkDeleteMedia,
 } = require("../controllers/galleryController");
 const { protect, authorize } = require("../middleware/auth");
 
@@ -15,6 +16,7 @@ router.use(protect);
 
 router.get("/", authorize("gallery:view"), getMedia);
 router.post("/upload", authorize("gallery:upload"), upload.array("files", 20), uploadMedia);
+router.post("/bulk-delete", authorize("gallery:delete"), bulkDeleteMedia);
 router.delete("/:id", authorize("gallery:delete"), deleteMedia);
 router.get("/:id/download", authorize("gallery:view"), downloadMedia);
 

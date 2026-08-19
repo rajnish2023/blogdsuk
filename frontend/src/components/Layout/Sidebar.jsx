@@ -9,7 +9,7 @@ const navItems = [
   { to: "/users",   label: "Users & Roles", icon: Users,        live: true, permission: "users:view" },
   { to: "/blog",    label: "Blog",         icon: Newspaper,    live: true, permission: "blog:view" },
   { to: "/pages",   label: "Webpages",     icon: LayoutTemplate, live: true, permission: "pages:view" },
-  { to: "/settings", label: "Settings",    icon: Settings,      live: true },
+  { to: "/settings", label: "Settings",    icon: Settings,      live: true, superAdminOnly: true },
   { to: "/migrate", label: "Database Admin", icon: Database,     live: true, superAdminOnly: true },
 ];
 
@@ -26,7 +26,11 @@ export default function Sidebar() {
       <nav className="mt-2 flex-1 space-y-1 px-3">
         {navItems.map(({ to, label, icon: Icon, live, permission, superAdminOnly }) => {
           if (superAdminOnly && !isSuperAdmin) return null;
-          const enabled = live && (!permission || can(permission));
+          
+          const hasPerm = !permission || can(permission);
+          if (!hasPerm) return null;  
+
+          const enabled = live && hasPerm;
           return (
             <NavLink
               key={to}

@@ -1,6 +1,7 @@
-import { createContext, useContext, useEffect, useState, useCallback } from "react";
+import { createContext, useContext, useEffect, useState, useCallback, useRef } from "react";
 import { loginRequest, logoutRequest, refreshRequest } from "../api/authApi";
 import { setAccessToken, clearAccessToken } from "../api/tokenStore";
+import { setLogoutHandler, scheduleTokenRefresh, cancelTokenRefresh } from "../api/client";
 import { fetchPublicSettings } from "../api/settingApi";
 
 const AuthContext = createContext(null);
@@ -10,6 +11,9 @@ export function AuthProvider({ children }) {
   const [initializing, setInitializing] = useState(true);
   const [error, setError] = useState(null);
   const [settings, setSettings] = useState({ companyName: "Dynamics Square", customLogo: "" });
+  const userRef = useRef(null);
+ 
+  userRef.current = user;
 
   const loadSettings = useCallback(async () => {
     try {
@@ -20,6 +24,18 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
+ 
+  const forceLogout = useCallback(() => {
+    clearAccessToken();
+    cancelTokenRefresh();
+    setUser(null);
+  }, []);
+ 
+  useEffect(() => {
+    setLogoutHandler(forceLogout);
+    return () => setLogoutHandler(null);
+  }, [forceLogout]);
+
   useEffect(() => {
     (async () => {
       try {
@@ -27,6 +43,8 @@ export function AuthProvider({ children }) {
         const data = await refreshRequest();
         setAccessToken(data.accessToken);
         setUser(data.user);
+    
+        scheduleTokenRefresh();
       } catch {
         clearAccessToken();
         setUser(null);
@@ -34,6 +52,8 @@ export function AuthProvider({ children }) {
         setInitializing(false);
       }
     })();
+ 
+    return () => cancelTokenRefresh();
   }, [loadSettings]);
 
   const login = useCallback(async (email, password) => {
@@ -42,6 +62,8 @@ export function AuthProvider({ children }) {
       const data = await loginRequest(email, password);
       setAccessToken(data.accessToken);
       setUser(data.user);
+     
+      scheduleTokenRefresh();
       return true;
     } catch (err) {
       setError(err?.response?.data?.message || "Sign in failed");
@@ -53,9 +75,10 @@ export function AuthProvider({ children }) {
     try {
       await logoutRequest();
     } catch {
-      // Clear local state regardless of whether the server call succeeded.
+      
     }
     clearAccessToken();
+    cancelTokenRefresh();
     setUser(null);
   }, []);
 

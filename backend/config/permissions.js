@@ -1,6 +1,4 @@
-// Single source of truth for every permission in the system.
-// Keyed as "module:action" so both backend middleware and the frontend
-// permission matrix can render/check against the same list.
+ 
 
 const PERMISSIONS = [
   { key: "gallery:view", module: "Gallery", action: "View", description: "View images and videos in the gallery" },

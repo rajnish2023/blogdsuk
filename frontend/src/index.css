@@ -45,9 +45,6 @@
   }
 }
 
-/* TipTap editor content — scoped typography since the Tailwind Typography
-   plugin isn't installed. Mirrors how this same HTML renders wherever a
-   published post is displayed elsewhere on the site. */
 .tiptap-content {
   font-size: 0.9375rem;
   line-height: 1.7;
@@ -63,6 +60,9 @@
 .tiptap-content h1 { font-family: 'Space Grotesk', sans-serif; font-size: 1.75rem; font-weight: 700; margin: 1.25em 0 0.5em; }
 .tiptap-content h2 { font-family: 'Space Grotesk', sans-serif; font-size: 1.375rem; font-weight: 600; margin: 1.1em 0 0.5em; }
 .tiptap-content h3 { font-family: 'Space Grotesk', sans-serif; font-size: 1.125rem; font-weight: 600; margin: 1em 0 0.4em; }
+.tiptap-content h4 { font-family: 'Space Grotesk', sans-serif; font-size: 1rem; font-weight: 600; margin: 0.9em 0 0.35em; }
+.tiptap-content h5 { font-family: 'Space Grotesk', sans-serif; font-size: 0.9375rem; font-weight: 600; margin: 0.8em 0 0.3em; text-transform: uppercase; letter-spacing: 0.03em; }
+.tiptap-content h6 { font-family: 'Space Grotesk', sans-serif; font-size: 0.875rem; font-weight: 600; margin: 0.75em 0 0.25em; color: #6b7280; }
 .tiptap-content p { margin: 0.6em 0; }
 .tiptap-content ul, .tiptap-content ol { margin: 0.6em 0; padding-left: 1.5em; }
 .tiptap-content ul { list-style: disc; }

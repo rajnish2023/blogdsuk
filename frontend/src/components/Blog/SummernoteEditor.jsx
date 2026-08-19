@@ -47,10 +47,10 @@ export default function SummernoteEditor({ value, onChange, placeholder = "Write
       try {
         $el.summernote("destroy");
       } catch {
-        // Editor may already be gone if the DOM node was removed first.
+         
       }
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    
   }, []);
 
    

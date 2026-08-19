@@ -4,8 +4,7 @@ export default function Logo({ size = "md", theme = "light" }) {
   const { settings } = useAuth();
   const apiBase = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
   const serverBase = apiBase.endsWith("/api") ? apiBase.slice(0, -4) : apiBase;
-
-  // Resolve full custom logo path if defined
+ 
   const logoUrl = settings?.customLogo
     ? settings.customLogo.startsWith("http")
       ? settings.customLogo
@@ -25,8 +24,7 @@ export default function Logo({ size = "md", theme = "light" }) {
       </div>
     );
   }
-
-  // Fallback brand grid logo
+ 
   return (
     <div className="flex items-center gap-3">
       <div className="grid h-9 w-9 grid-cols-2 grid-rows-2 gap-[4px] text-[10px] font-extrabold text-white select-none">

@@ -24,7 +24,7 @@ export default function GalleryPage() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
-  const LIMIT = 24;
+  const LIMIT = 25;
 
   const [type, setType] = useState("all");
   const [search, setSearch] = useState("");
@@ -106,7 +106,6 @@ export default function GalleryPage() {
   return (
     <div className="flex h-screen flex-1 flex-col overflow-hidden">
       <header className="border-b border-paper-line bg-paper-card px-8 py-6">
-        {/* <p className="font-mono text-xs uppercase tracking-wide text-signal">Module 1</p> */}
         <h1 className="font-display text-2xl font-semibold text-ink">Gallery Management</h1>
         <p className="mt-1 text-sm text-muted">Upload, organize, and share images and videos.</p>
       </header>

@@ -10,7 +10,7 @@ export default function MediaCard({ item, onPreview, onCopyLink, onDownload, onD
     <div
       className="group relative flex flex-col overflow-hidden rounded-2xl border border-paper-line bg-paper-card shadow-card transition-all hover:-translate-y-0.5 hover:shadow-pop"
     >
-      {/* Signature: square corner accent on hover */}
+
       <div className="pointer-events-none absolute right-0 top-0 z-10 h-5 w-5 origin-top-right scale-0 bg-signal transition-transform duration-200 group-hover:scale-100" style={{ clipPath: "polygon(100% 0, 0 0, 100% 100%)" }} />
 
       <button

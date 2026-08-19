@@ -97,7 +97,7 @@ export default function BlogListPage() {
   return (
     <div className="flex h-screen flex-1 flex-col overflow-hidden">
       <header className="border-b border-paper-line bg-paper-card px-8 py-6">
-        {/* <p className="font-mono text-xs uppercase tracking-wide text-signal">Module 3</p> */}
+         
         <h1 className="font-display text-2xl font-semibold text-ink">Blog Management</h1>
         <p className="mt-1 text-sm text-muted">Write, categorize, and optimize posts for search.</p>
       </header>
@@ -178,7 +178,7 @@ export default function BlogListPage() {
             filteredDescription="Try a different keyword, or clear filters to see every post."
           />
         ) : (
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {posts.map((post) => (
               <BlogCard key={post._id} post={post} onDelete={setDeleteTarget} canEdit={canEdit} canDelete={canDelete} />
             ))}

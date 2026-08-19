@@ -4,7 +4,7 @@ import { Plus, Trash2, Braces, AlertCircle } from "lucide-react";
 const SCHEMA_TYPES = ["Article", "BlogPosting", "FAQPage", "HowTo", "Product", "Review", "Custom"];
 
 const isValidJson = (str) => {
-  if (!str.trim()) return true; // empty is fine, just won't be saved
+  if (!str.trim()) return true; 
   try {
     JSON.parse(str);
     return true;

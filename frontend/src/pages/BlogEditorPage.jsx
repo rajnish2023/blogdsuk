@@ -1,6 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
-import { ArrowLeft, Loader2, Save, Send, Pencil } from "lucide-react";
+import {
+  ArrowLeft, Loader2, Save, Send, Pencil, ChevronRight,
+  PanelRightClose, PanelRightOpen, CheckCircle2, CloudOff,
+} from "lucide-react";
 import TipTapEditor from "../components/Blog/TipTapEditor";
 import SeoPanel from "../components/Blog/SeoPanel";
 import SchemaMarkupPanel from "../components/Blog/SchemaMarkupPanel";
@@ -33,7 +36,16 @@ export default function BlogEditorPage() {
   const [slugTouched, setSlugTouched] = useState(false);
   const [status, setStatus] = useState("draft");
   const [toast, setToast] = useState(null);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
   const showToast = (message, type = "success") => setToast({ message, type });
+
+  // Auto-draft save state
+  const [autoSaveStatus, setAutoSaveStatus] = useState("idle"); // idle | saving | saved | error
+  const autoSaveTimerRef = useRef(null);
+  const postIdRef = useRef(id || null);
+  const initialLoadDone = useRef(false);
+  const formRef = useRef(null);
+  formRef.current = null; // will be set after form state is declared
 
   const [form, setForm] = useState({
     title: "",
@@ -48,6 +60,9 @@ export default function BlogEditorPage() {
     faqs: [],
     seo: emptySeo,
   });
+
+  // Keep formRef in sync
+  formRef.current = form;
 
   useEffect(() => {
     fetchCategories().then(setCategories).catch(() => {});
@@ -74,7 +89,9 @@ export default function BlogEditorPage() {
         });
         setCurrentAuthor(blog.author);
         setStatus(blog.status);
-        setSlugTouched(true);
+        // We do NOT set slugTouched=true here anymore.
+        // This allows the slug to auto-generate even when editing a post,
+        // unless the user specifically manually edits the slug field.
       } catch (err) {
         showToast("Failed to load post", "error");
       } finally {
@@ -83,6 +100,69 @@ export default function BlogEditorPage() {
     })();
   }, [id, isEdit]);
 
+  // ─── Auto-draft save (5s debounce after any change) ───
+  useEffect(() => {
+    // Skip auto-save during initial load or if there's no title yet
+    if (!initialLoadDone.current) {
+      // Mark initial load done after first render with form data
+      if (!isEdit || !loading) initialLoadDone.current = true;
+      return;
+    }
+    if (!form.title.trim() || saving) return;
+
+    // Don't auto-save if already published (user must explicitly publish)
+    // Auto-save only works for draft status
+    if (status === "published") {
+      setAutoSaveStatus("idle");
+      return;
+    }
+
+    setAutoSaveStatus("idle");
+
+    // Clear previous timer
+    if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+
+    autoSaveTimerRef.current = setTimeout(async () => {
+      const currentForm = formRef.current;
+      if (!currentForm || !currentForm.title.trim()) return;
+
+      setAutoSaveStatus("saving");
+      try {
+        const payload = {
+          title: currentForm.title,
+          slug: currentForm.slug,
+          content: currentForm.content,
+          excerpt: currentForm.excerpt,
+          category: currentForm.category || null,
+          tags: currentForm.tags,
+          featuredImage: currentForm.featuredImage,
+          seo: currentForm.seo,
+          schemaMarkup: currentForm.schemaMarkup,
+          faqs: currentForm.faqs,
+          status: "draft",
+        };
+
+        if (postIdRef.current) {
+          // Update existing post
+          await updateBlog(postIdRef.current, payload);
+        } else {
+          // Create new post for first time
+          const blog = await createBlog(payload);
+          postIdRef.current = blog._id;
+          // Update the URL without full reload
+          navigate(`/blog/${blog._id}/edit`, { replace: true });
+        }
+        setAutoSaveStatus("saved");
+      } catch {
+        setAutoSaveStatus("error");
+      }
+    }, 5000); // 5 second debounce
+
+    return () => {
+      if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+    };
+  }, [form.title, form.slug, form.content, form.excerpt, form.category, form.tags, form.featuredImage, form.seo, form.schemaMarkup, form.faqs, saving, status, navigate]);
+
   const handleTitleChange = (e) => {
     const title = e.target.value;
     setForm((f) => ({ ...f, title, slug: slugTouched ? f.slug : slugify(title) }));
@@ -90,7 +170,11 @@ export default function BlogEditorPage() {
 
   const handleSlugChange = (e) => {
     setSlugTouched(true);
-    setForm((f) => ({ ...f, slug: slugify(e.target.value) }));
+    let val = e.target.value;
+    // Replace spaces with hyphens immediately and remove invalid chars,
+    // but don't trim() so the user can type a trailing hyphen.
+    val = val.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "").replace(/-+/g, "-");
+    setForm((f) => ({ ...f, slug: val }));
   };
 
   const buildPayload = (targetStatus) => ({
@@ -145,60 +229,96 @@ export default function BlogEditorPage() {
 
   return (
     <div className="flex h-screen flex-1 flex-col overflow-hidden">
-      <header className="flex items-center justify-between border-b border-paper-line bg-paper-card px-8 py-4">
-        <div className="flex items-center gap-3">
-          <Link to="/blog" className="rounded-md p-2 text-muted hover:bg-paper hover:text-ink">
+      {/* ─── Compact Top Header ─── */}
+      <header className="flex items-center justify-between border-b border-paper-line bg-paper-card px-4 py-2.5 lg:px-6">
+        <div className="flex items-center gap-2 min-w-0">
+          <Link to="/blog" className="flex-shrink-0 rounded-md p-1.5 text-muted hover:bg-paper hover:text-ink transition-colors">
             <ArrowLeft size={18} />
           </Link>
-          <div>
-            <p className="font-mono text-xs uppercase tracking-wide text-signal">{isEdit ? "Edit post" : "New post"}</p>
-            <h1 className="font-display text-lg font-semibold text-ink">{form.title || "Untitled post"}</h1>
+          <div className="flex items-center gap-1.5 text-xs text-muted">
+            <span className="hidden sm:inline">Blog</span>
+            <ChevronRight size={12} className="hidden sm:inline text-muted/50" />
+            <span className="font-semibold text-signal">{isEdit ? "Edit" : "New post"}</span>
           </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold capitalize ${status === "published" ? "bg-success/10 text-success" : "bg-ink/10 text-muted"}`}>
+          <span className={`ml-2 rounded-full px-2 py-0.5 text-[10px] font-semibold capitalize ${status === "published" ? "bg-success/10 text-success" : "bg-ink/10 text-muted"}`}>
             {status}
           </span>
-          <button onClick={() => handleSave("draft")} disabled={saving} className="btn-secondary disabled:opacity-60">
-            {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+          {/* Auto-save status indicator */}
+          {autoSaveStatus === "saving" && (
+            <span className="ml-2 flex items-center gap-1 text-[10px] text-muted animate-pulse">
+              <Loader2 size={10} className="animate-spin" /> Saving...
+            </span>
+          )}
+          {autoSaveStatus === "saved" && (
+            <span className="ml-2 flex items-center gap-1 text-[10px] text-success">
+              <CheckCircle2 size={10} /> Auto-saved
+            </span>
+          )}
+          {autoSaveStatus === "error" && (
+            <span className="ml-2 flex items-center gap-1 text-[10px] text-danger">
+              <CloudOff size={10} /> Save failed
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            className="hidden lg:flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium text-muted hover:bg-paper hover:text-ink transition-colors"
+            title={sidebarOpen ? "Hide sidebar" : "Show sidebar"}
+          >
+            {sidebarOpen ? <PanelRightClose size={16} /> : <PanelRightOpen size={16} />}
+          </button>
+          <button onClick={() => handleSave("draft")} disabled={saving} className="btn-secondary text-xs disabled:opacity-60">
+            {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
             Save draft
           </button>
           {canPublish && (
-            <button onClick={() => handleSave("published")} disabled={saving} className="btn-primary disabled:opacity-60">
-              <Send size={16} />
-              {status === "published" ? "Update & keep live" : "Publish"}
+            <button onClick={() => handleSave("published")} disabled={saving} className="btn-primary text-xs disabled:opacity-60">
+              <Send size={14} />
+              {status === "published" ? "Update" : "Publish"}
             </button>
           )}
         </div>
       </header>
 
-      <main className="flex-1 overflow-y-auto px-8 py-6">
-        <div className="mx-auto grid max-w-6xl grid-cols-1 gap-6 lg:grid-cols-[1fr_320px]">
-          <div className="space-y-5">
-            <div className="rounded-2xl border border-paper-line bg-paper-card p-5 shadow-card">
+      {/* ─── Main Content Area ─── */}
+      <div className="flex flex-1 overflow-hidden">
+         
+        <div className="flex flex-1 flex-col overflow-y-auto">
+          <div className="mx-auto flex w-full max-w-4xl flex-1 flex-col px-4 py-5 lg:px-8">
+            {/* Title + Slug */}
+            <div className="mb-4 rounded-2xl border border-paper-line bg-paper-card p-5 shadow-card">
               <input
                 value={form.title}
                 onChange={handleTitleChange}
                 placeholder="Post title"
                 className="w-full border-none bg-transparent font-display text-2xl font-semibold text-ink placeholder:text-muted/50 focus:outline-none"
               />
-              <div className="mt-2 flex items-center gap-1.5 text-xs text-muted">
-                <span>dynamicssquare.com/blog/</span>
-                <div className="group relative flex items-center gap-1">
+              <div className="mt-2 flex items-center text-xs text-muted">
+                <span className="font-mono text-muted/50 mr-1">/</span>
+                <div className="group relative flex flex-1 items-center">
                   <input
                     value={form.slug}
                     onChange={handleSlugChange}
-                    className="w-auto min-w-[80px] rounded border border-transparent bg-transparent px-1 py-0.5 font-mono text-xs text-signal focus:border-paper-line focus:bg-paper focus:outline-none"
-                    style={{ width: `${Math.max(form.slug.length, 8)}ch` }}
+                    placeholder="post-url-slug"
+                    className="w-full rounded border border-transparent bg-transparent px-1.5 py-1 font-mono text-xs text-signal transition-colors focus:border-paper-line focus:bg-paper focus:outline-none"
                   />
-                  <Pencil size={10} className="opacity-0 group-hover:opacity-60" />
+                  <Pencil size={12} className="absolute right-2 opacity-0 transition-opacity group-hover:opacity-60 pointer-events-none" />
                 </div>
               </div>
             </div>
 
-            <TipTapEditor value={form.content} onChange={(html) => setForm((f) => ({ ...f, content: html }))} />
+            {/* Editor (fills remaining height) */}
+            <div className="mb-4 flex-1">
+              <TipTapEditor
+                value={form.content}
+                onChange={(html) => setForm((f) => ({ ...f, content: html }))}
+                fullHeight
+              />
+            </div>
 
-            <div className="rounded-2xl border border-paper-line bg-paper-card p-5 shadow-card">
+            {/* Excerpt */}
+            <div className="mb-4 rounded-2xl border border-paper-line bg-paper-card p-5 shadow-card">
               <label className="mb-1.5 block text-xs font-medium text-muted">Excerpt</label>
               <textarea
                 value={form.excerpt}
@@ -210,37 +330,50 @@ export default function BlogEditorPage() {
               />
             </div>
 
-            <FaqSection
-              faqs={form.faqs}
-              onChange={(faqs) => setForm((f) => ({ ...f, faqs }))}
-            />
+            {/* FAQs */}
+            <div className="mb-4">
+              <FaqSection
+                faqs={form.faqs}
+                onChange={(faqs) => setForm((f) => ({ ...f, faqs }))}
+              />
+            </div>
           </div>
+        </div>
 
-          <div className="space-y-5">
-            <div className="rounded-2xl border border-paper-line bg-paper-card p-5 shadow-card">
-              <label className="mb-1.5 block text-xs font-medium text-muted">Featured image</label>
+        {/* ─── Right Sidebar (toggleable, independently scrollable) ─── */}
+        <aside
+          className={`border-l border-paper-line bg-paper transition-all duration-300 overflow-y-auto ${
+            sidebarOpen ? "w-[320px] min-w-[320px]" : "w-0 min-w-0 overflow-hidden border-l-0"
+          }`}
+        >
+          <div className="space-y-4 p-4">
+            {/* Featured Image */}
+            <div className="rounded-2xl border border-paper-line bg-paper-card p-4 shadow-card">
+              <label className="mb-1.5 block text-xs font-semibold text-muted uppercase tracking-wider">Featured Image</label>
               <FeaturedImagePicker image={form.featuredImage} onChange={(img) => setForm((f) => ({ ...f, featuredImage: img }))} />
             </div>
 
+            {/* Author Reassignment */}
             {isEdit && canReassignAuthor && authors.length > 0 && (
-              <div className="rounded-2xl border border-paper-line bg-paper-card p-5 shadow-card">
-                <label className="mb-1.5 block text-xs font-medium text-muted">Author</label>
+              <div className="rounded-2xl border border-paper-line bg-paper-card p-4 shadow-card">
+                <label className="mb-1.5 block text-xs font-semibold text-muted uppercase tracking-wider">Author</label>
                 <AuthorSelect
                   authors={authors}
                   value={form.author}
                   currentAuthor={currentAuthor}
                   onChange={(author) => setForm((f) => ({ ...f, author }))}
                 />
-                <p className="mt-2 text-xs text-muted">Reassigning takes effect the next time you save.</p>
+                <p className="mt-2 text-[10px] text-muted">Reassigning takes effect the next time you save.</p>
               </div>
             )}
 
-            <div className="rounded-2xl border border-paper-line bg-paper-card p-5 shadow-card">
-              <label className="mb-1.5 block text-xs font-medium text-muted">Category</label>
+            {/* Category + Tags */}
+            <div className="rounded-2xl border border-paper-line bg-paper-card p-4 shadow-card">
+              <label className="mb-1.5 block text-xs font-semibold text-muted uppercase tracking-wider">Category</label>
               <select
                 value={form.category}
                 onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
-                className="w-full rounded-lg border border-paper-line bg-paper px-3 py-2.5 text-sm text-ink focus:border-signal"
+                className="w-full rounded-lg border border-paper-line bg-paper px-3 py-2 text-sm text-ink focus:border-signal"
               >
                 <option value="">No category</option>
                 {categories.map((c) => (
@@ -250,10 +383,11 @@ export default function BlogEditorPage() {
                 ))}
               </select>
 
-              <label className="mb-1.5 mt-4 block text-xs font-medium text-muted">Tags</label>
+              <label className="mb-1.5 mt-4 block text-xs font-semibold text-muted uppercase tracking-wider">Tags</label>
               <TagInput tags={form.tags} onChange={(tags) => setForm((f) => ({ ...f, tags }))} />
             </div>
 
+            {/* SEO Panel */}
             <SeoPanel
               title={form.seo.metaTitle || form.title}
               content={form.content}
@@ -262,10 +396,11 @@ export default function BlogEditorPage() {
               onSeoChange={(seo) => setForm((f) => ({ ...f, seo }))}
             />
 
+            {/* Schema Markup */}
             <SchemaMarkupPanel entries={form.schemaMarkup} onChange={(schemaMarkup) => setForm((f) => ({ ...f, schemaMarkup }))} />
           </div>
-        </div>
-      </main>
+        </aside>
+      </div>
 
       <Toast toast={toast} onDismiss={() => setToast(null)} />
     </div>

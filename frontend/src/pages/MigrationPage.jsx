@@ -6,8 +6,7 @@ import {
 } from "lucide-react";
 import { API_BASE } from "../api/client";
 import { getAccessToken } from "../api/tokenStore";
-
-// ─── Stage icons + labels for SQL Migration ─────────────────────────────────
+ 
 const STAGE_META = {
   categories: { icon: BarChart2, label: "Categories", color: "#6366f1" },
   users:      { icon: Users,    label: "Users",       color: "#0ea5e9" },

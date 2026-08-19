@@ -36,7 +36,7 @@ export default function BlogCard({ post, onDelete, canEdit, canDelete }) {
         <Link to={`/blog/${post._id}/edit`}>
           <h3 className="font-display text-sm font-semibold leading-snug text-ink line-clamp-2 hover:text-signal">{post.title}</h3>
         </Link>
-        <p className="line-clamp-2 text-xs text-muted">{post.excerpt}</p>
+
 
         <div className="mt-auto flex items-center justify-between pt-2">
           <div className="flex items-center gap-2">

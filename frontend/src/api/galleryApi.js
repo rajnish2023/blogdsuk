@@ -1,7 +1,7 @@
 import client from "./client";
 
-export const fetchMedia = async ({ type = "all", search = "", sort = "newest", page = 1 } = {}) => {
-  const { data } = await client.get("/gallery", { params: { type, search, sort, page } });
+export const fetchMedia = async ({ type = "all", search = "", sort = "newest", page = 1, limit } = {}) => {
+  const { data } = await client.get("/gallery", { params: { type, search, sort, page, limit } });
   return data;
 };
 

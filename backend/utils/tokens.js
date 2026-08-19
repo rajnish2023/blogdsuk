@@ -19,7 +19,7 @@ const hashToken = (token) => crypto.createHash("sha256").update(token).digest("h
 const refreshCookieOptions = () => ({
   httpOnly: true,
   secure: process.env.NODE_ENV === "production",
-  sameSite: "strict",
+  sameSite: "lax",
   path: "/api/auth",
   maxAge: 7 * 24 * 60 * 60 * 1000,
 });

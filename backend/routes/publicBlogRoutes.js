@@ -1,24 +1,32 @@
 const express = require("express");
 const router = express.Router();
 const { apiLimiter } = require("../middleware/rateLimiter");
+const { requireApiKey } = require("../middleware/publicAuth");
 const {
   listPublicBlogs,
+  getLatestBlog,
+  getArchiveBlogs,
   getPublicBlogBySlug,
   getTrendingBlogs,
   getRandomBlogs,
+  listPublicCategories,
   getBlogsByCategory,
+  listPublicAuthors,
   getBlogsByAuthor,
 } = require("../controllers/publicBlogController");
-
-// Secure all public endpoints under the rate limiter to prevent crawling/DDoS abuse
+ 
 router.use(apiLimiter);
-
-// Expose endpoints
+router.use(requireApiKey);
+ 
 router.get("/", listPublicBlogs);
+router.get("/latest", getLatestBlog);
+router.get("/archive", getArchiveBlogs);
 router.get("/trending", getTrendingBlogs);
 router.get("/random", getRandomBlogs);
+router.get("/categories", listPublicCategories);
+router.get("/authors", listPublicAuthors);
 router.get("/slug/:slug", getPublicBlogBySlug);
 router.get("/category/:categorySlug", getBlogsByCategory);
-router.get("/author/:authorId", getBlogsByAuthor);
+router.get("/author/:authorSlug", getBlogsByAuthor);
 
 module.exports = router;

@@ -1,11 +1,7 @@
 const Setting = require("../models/Setting");
 const fs = require("fs");
 const path = require("path");
-
-/**
- * GET /api/public/settings
- * Retrieve all public settings. No authentication required.
- */
+ 
 const getPublicSettings = async (req, res) => {
   try {
     const list = await Setting.find({});
@@ -13,7 +9,7 @@ const getPublicSettings = async (req, res) => {
     list.forEach((s) => {
       settings[s.key] = s.value;
     });
-    // Default fallback values
+   
     if (!settings.companyName) settings.companyName = "Dynamics Square";
     if (!settings.customLogo) settings.customLogo = "";
 
@@ -23,11 +19,7 @@ const getPublicSettings = async (req, res) => {
     res.status(500).json({ message: "Failed to retrieve settings" });
   }
 };
-
-/**
- * PUT /api/settings
- * Update settings key-value pair. Admin only.
- */
+ 
 const updateSetting = async (req, res) => {
   const { key, value } = req.body;
   if (!key) {
@@ -47,17 +39,14 @@ const updateSetting = async (req, res) => {
   }
 };
 
-/**
- * POST /api/settings/upload-logo
- * Upload custom logo file. Admin only.
- */
+ 
 const uploadLogo = async (req, res) => {
   if (!req.file) {
     return res.status(400).json({ message: "No file uploaded" });
   }
 
   try {
-    // Construct public file URL
+   
     const fileUrl = `/uploads/${req.file.filename}`;
 
     // Update in database setting key "customLogo"

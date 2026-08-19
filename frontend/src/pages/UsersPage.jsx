@@ -126,7 +126,6 @@ export default function UsersPage() {
   return (
     <div className="flex h-screen flex-1 flex-col overflow-hidden">
       <header className="border-b border-paper-line bg-paper-card px-8 py-6">
-        {/* <p className="font-mono text-xs uppercase tracking-wide text-signal">Module 2</p> */}
         <h1 className="font-display text-2xl font-semibold text-ink">Users &amp; Roles</h1>
         <p className="mt-1 text-sm text-muted">Manage your team and control what each role can access.</p>
       </header>

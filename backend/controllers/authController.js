@@ -76,7 +76,7 @@ exports.refresh = async (req, res) => {
     try {
       payload = verifyRefreshToken(token);
     } catch {
-      res.clearCookie("refreshToken", { path: "/api/auth" });
+      res.clearCookie("refreshToken", refreshCookieOptions());
       return res.status(401).json({ message: "Session expired, please sign in again" });
     }
 
@@ -111,7 +111,7 @@ exports.logout = async (req, res) => {
         
       }
     }
-    res.clearCookie("refreshToken", { path: "/api/auth" });
+    res.clearCookie("refreshToken", refreshCookieOptions());
     res.json({ message: "Signed out" });
   } catch (err) {
     res.status(500).json({ message: "Logout failed" });

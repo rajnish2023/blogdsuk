@@ -102,6 +102,85 @@ exports.getPublicBlogBySlug = async (req, res) => {
   }
 };
 
+// 2a. Get Latest Blog
+exports.getLatestBlog = async (req, res) => {
+  try {
+    const blog = await Blog.findOne({ status: "published" })
+      .sort({ publishedAt: -1, createdAt: -1 })
+      .populate("category", SAFE_CATEGORY_FIELDS)
+      .populate("author", SAFE_AUTHOR_FIELDS)
+      .lean();
+
+    if (!blog) {
+      return res.status(404).json({ message: "No published blogs found" });
+    }
+    res.status(200).json(blog);
+  } catch (err) {
+    console.error("getLatestBlog error:", err);
+    res.status(500).json({ message: "Error fetching latest blog" });
+  }
+};
+
+// 2b. Get Archive Blogs (All except latest)
+exports.getArchiveBlogs = async (req, res) => {
+  try {
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.max(1, Math.min(100, parseInt(req.query.limit) || 10));
+    // Skip 1 for the absolute latest, plus pagination skip
+    const skip = 1 + (page - 1) * limit;
+
+    const query = { status: "published" };
+    
+    // Search query parameter
+    if (req.query.q) {
+      const searchRegex = new RegExp(req.query.q.trim().replace(/[-\/\\^$*+?.()|[\]{}]/g, "\\$&"), "i");
+      query.$or = [{ title: searchRegex }, { content: searchRegex }, { excerpt: searchRegex }];
+    }
+
+    // Category filter by Slug
+    if (req.query.categorySlug) {
+      const category = await Category.findOne({ slug: req.query.categorySlug.trim() });
+      if (category) {
+        query.category = category._id;
+      } else {
+        return res.status(200).json({
+          blogs: [],
+          pagination: { page, limit, totalPages: 0, totalBlogs: 0 },
+        });
+      }
+    }
+
+    const sort = { publishedAt: -1, createdAt: -1 };
+
+    const [blogs, totalDocs] = await Promise.all([
+      Blog.find(query)
+        .sort(sort)
+        .skip(skip)
+        .limit(limit)
+        .populate("category", SAFE_CATEGORY_FIELDS)
+        .populate("author", SAFE_AUTHOR_FIELDS)
+        .lean(),
+      Blog.countDocuments(query),
+    ]);
+    
+    // totalBlogs for this specific endpoint means all minus 1
+    const totalBlogs = Math.max(0, totalDocs - 1);
+
+    res.status(200).json({
+      blogs,
+      pagination: {
+        page,
+        limit,
+        totalPages: Math.ceil(totalBlogs / limit),
+        totalBlogs,
+      },
+    });
+  } catch (err) {
+    console.error("getArchiveBlogs error:", err);
+    res.status(500).json({ message: "Error fetching archive blogs" });
+  }
+};
+
 //  3. Get Trending Blogs 
 exports.getTrendingBlogs = async (req, res) => {
   try {
@@ -194,22 +273,33 @@ exports.getBlogsByCategory = async (req, res) => {
   }
 };
 
-//  6. Get Blogs by Author ID  
+// 5a. Get All Categories
+exports.listPublicCategories = async (req, res) => {
+  try {
+    const categories = await Category.find({}).select(SAFE_CATEGORY_FIELDS).sort({ name: 1 }).lean();
+    res.status(200).json(categories);
+  } catch (err) {
+    console.error("listPublicCategories error:", err);
+    res.status(500).json({ message: "Error fetching categories" });
+  }
+};
+
+//  6. Get Blogs by Author Slug  
 exports.getBlogsByAuthor = async (req, res) => {
   try {
-    const { authorId } = req.params;
-    if (!mongoose.Types.ObjectId.isValid(authorId)) {
-      return res.status(400).json({ message: "Invalid author ID format" });
+    const { authorSlug } = req.params;
+    if (!authorSlug) {
+      return res.status(400).json({ message: "Author slug is required" });
     }
 
-    const author = await User.findById(authorId).select(SAFE_AUTHOR_FIELDS).lean();
+    const author = await User.findOne({ authorSlug: authorSlug.trim() }).select(SAFE_AUTHOR_FIELDS).lean();
     if (!author) return res.status(404).json({ message: "Author not found" });
 
     const page = Math.max(1, parseInt(req.query.page) || 1);
     const limit = Math.max(1, Math.min(100, parseInt(req.query.limit) || 10));
     const skip = (page - 1) * limit;
 
-    const query = { author: authorId, status: "published" };
+    const query = { author: author._id, status: "published" };
 
     const [blogs, totalBlogs] = await Promise.all([
       Blog.find(query)
@@ -235,5 +325,31 @@ exports.getBlogsByAuthor = async (req, res) => {
   } catch (err) {
     console.error("getBlogsByAuthor error:", err);
     res.status(500).json({ message: "Error fetching author blogs" });
+  }
+};
+
+// 6a. Get All Authors
+exports.listPublicAuthors = async (req, res) => {
+  try {
+    // Find all authors that have at least one published blog
+    const publishedBlogs = await Blog.find({ status: "published" }).distinct("author");
+    
+    let authors = await User.find({ _id: { $in: publishedBlogs } })
+      .select(`${SAFE_AUTHOR_FIELDS} authorSlug`)
+      .lean();
+
+    // Sort authors by designation alphabetically (since no specific rank logic is requested)
+    // Authors without designation go to the end
+    authors.sort((a, b) => {
+      if (a.designation && !b.designation) return -1;
+      if (!a.designation && b.designation) return 1;
+      if (!a.designation && !b.designation) return a.name.localeCompare(b.name);
+      return a.designation.localeCompare(b.designation) || a.name.localeCompare(b.name);
+    });
+
+    res.status(200).json(authors);
+  } catch (err) {
+    console.error("listPublicAuthors error:", err);
+    res.status(500).json({ message: "Error fetching authors" });
   }
 };

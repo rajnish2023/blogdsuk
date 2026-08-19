@@ -19,6 +19,7 @@ const UserSchema = new mongoose.Schema(
     avatarUrl: { type: String, default: "" },
     designation: { type: String, trim: true, maxlength: 100, default: "" }, // set by admin
     about: { type: String, trim: true, maxlength: 500, default: "" }, // self-editable bio
+    authorSlug: { type: String, trim: true, unique: true, sparse: true },
 
     lastLogin: { type: Date },
 
@@ -41,6 +42,24 @@ UserSchema.virtual("isLocked").get(function () {
 });
 
 UserSchema.pre("save", async function (next) {
+  // Auto-generate authorSlug from name if missing or if name changed
+  if (this.isModified("name") || !this.authorSlug) {
+    this.authorSlug = this.name
+      .toLowerCase()
+      .trim()
+      .replace(/[^\w\s-]/g, "")
+      .replace(/[\s_]+/g, "-")
+      .replace(/-+/g, "-")
+      .slice(0, 100);
+      
+    // Quick append a random string to avoid collisons for now, proper uniqueness requires querying DB
+    const crypto = require("crypto");
+    if (this.isNew || this.isModified("name")) {
+        const hash = crypto.randomBytes(3).toString('hex');
+        this.authorSlug = `${this.authorSlug}-${hash}`;
+    }
+  }
+
   if (!this.isModified("password")) return next();
   this.password = await bcrypt.hash(this.password, 12);
   next();

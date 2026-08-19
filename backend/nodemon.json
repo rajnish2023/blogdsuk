@@ -7,5 +7,12 @@
     "routes",
     "utils",
     "server.js"
-  ]
+  ],
+  "ignore": [
+    "uploads/*",
+    "node_modules/*",
+    "*.test.js",
+    "scripts/*"
+  ],
+  "ext": "js,json"
 }

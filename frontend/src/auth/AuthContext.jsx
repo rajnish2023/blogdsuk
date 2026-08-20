@@ -35,8 +35,12 @@ export function AuthProvider({ children }) {
     setLogoutHandler(forceLogout);
     return () => setLogoutHandler(null);
   }, [forceLogout]);
+  const initRef = useRef(false);
 
   useEffect(() => {
+    if (initRef.current) return;
+    initRef.current = true;
+
     (async () => {
       try {
         await loadSettings();

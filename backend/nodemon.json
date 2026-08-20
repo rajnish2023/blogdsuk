@@ -9,6 +9,7 @@
     "server.js"
   ],
   "ignore": [
+    "uploads",
     "uploads/*",
     "node_modules/*",
     "*.test.js",

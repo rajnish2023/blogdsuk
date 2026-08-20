@@ -18,7 +18,7 @@ export const setLogoutHandler = (handler) => {
   onLogout = handler;
 };
 
-const doRefresh = async () => {
+export const doRefresh = async () => {
   if (!refreshPromise) {
     refreshPromise = axios
       .post(`${API_URL}/auth/refresh`, {}, { withCredentials: true })
@@ -27,9 +27,13 @@ const doRefresh = async () => {
         return data.accessToken;
       })
       .catch((err) => {
-        clearAccessToken();
-        // Notify AuthContext to clear user state and redirect to login
-        if (onLogout) onLogout();
+        // Only log out if the server explicitly rejected the refresh token (401/403).
+        // Ignore network errors, timeouts, or 5xx errors so the user stays logged in.
+        const status = err.response?.status;
+        if (status === 401 || status === 403 || status === 400) {
+          clearAccessToken();
+          if (onLogout) onLogout();
+        }
         throw err;
       })
       .finally(() => {

@@ -1,10 +1,11 @@
 import { NavLink } from "react-router-dom";
-import { Images, Users, Newspaper, LayoutTemplate, LogOut, Database, Settings } from "lucide-react";
+import { LayoutDashboard, Images, Users, Newspaper, LayoutTemplate, LogOut, Database, Settings } from "lucide-react";
 import { useAuth } from "../../auth/AuthContext";
 import { Avatar } from "../Users/Badges";
 import Logo from "./Logo";
 
 const navItems = [
+  { to: "/dashboard", label: "Dashboard",   icon: LayoutDashboard, live: true },
   { to: "/gallery", label: "Gallery",     icon: Images,        live: true, permission: "gallery:view" },
   { to: "/users",   label: "Users & Roles", icon: Users,        live: true, permission: "users:view" },
   { to: "/blog",    label: "Blog",         icon: Newspaper,    live: true, permission: "blog:view" },

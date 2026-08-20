@@ -16,13 +16,16 @@ const verifyRefreshToken = (token) => jwt.verify(token, process.env.JWT_REFRESH_
  
 const hashToken = (token) => crypto.createHash("sha256").update(token).digest("hex");
 
-const refreshCookieOptions = () => ({
-  httpOnly: true,
-  secure: process.env.NODE_ENV === "production",
-  sameSite: "lax",
-  path: "/api/auth",
-  maxAge: 7 * 24 * 60 * 60 * 1000,
-});
+const refreshCookieOptions = () => {
+  const isProd = process.env.NODE_ENV === "production";
+  return {
+    httpOnly: true,
+    secure: isProd,
+    sameSite: isProd ? "none" : "lax",
+    path: "/api/auth",
+    maxAge: 7 * 24 * 60 * 60 * 1000,
+  };
+};
 
 module.exports = {
   signAccessToken,

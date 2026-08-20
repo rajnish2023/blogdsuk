@@ -52,7 +52,8 @@ export const scheduleTokenRefresh = () => {
     const expiresAt = payload.exp * 1000; // convert to ms
     const now = Date.now();
  
-    const refreshIn = Math.max(expiresAt - now - 60_000, 10_000);
+    const MAX_TIMEOUT = 2147483647; // 32-bit signed max (approx 24.8 days)
+    const refreshIn = Math.min(Math.max(expiresAt - now - 60_000, 10_000), MAX_TIMEOUT);
 
     refreshTimer = setTimeout(async () => {
       try {

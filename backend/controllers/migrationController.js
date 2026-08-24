@@ -250,9 +250,14 @@ exports.runMigration = async (req, res) => {
         const isAdmin = (sqlUser.name || "").toLowerCase() === "admin" || (sqlUser.email || "").toLowerCase().includes("admin");
         const avatarLocalUrl = await downloadAndMapUrl(sqlUser.profile_photo_path);
         
-        const crypto = require("crypto");
         const baseSlug = (sqlUser.name || "").toLowerCase().trim().replace(/[^\w\s-]/g, "").replace(/[\s_]+/g, "-").replace(/-+/g, "-").slice(0, 100);
-        const slugHash = crypto.randomBytes(3).toString('hex');
+        
+        let uniqueSlug = baseSlug;
+        let counter = 1;
+        while (await User.findOne({ authorSlug: uniqueSlug })) {
+          uniqueSlug = `${baseSlug}-${counter}`;
+          counter++;
+        }
         
         const userDoc = {
           name: (sqlUser.name || "").substring(0, 100),
@@ -263,7 +268,7 @@ exports.runMigration = async (req, res) => {
           about: (sqlUser.about || "").substring(0, 500),
           designation: (sqlUser.role_name || "").substring(0, 100),
           avatarUrl: avatarLocalUrl || "",
-          authorSlug: `${baseSlug}-${slugHash}`
+          authorSlug: uniqueSlug
         };
         const result = await User.collection.insertOne(userDoc);
         user = { ...userDoc, _id: result.insertedId };

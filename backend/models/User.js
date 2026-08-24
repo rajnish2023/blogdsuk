@@ -52,10 +52,17 @@ UserSchema.pre("save", async function (next) {
       .replace(/-+/g, "-")
       .slice(0, 100);
       
-    // Quick append a random string to avoid collisions
-    const crypto = require("crypto");
-    const hash = crypto.randomBytes(3).toString('hex');
-    this.authorSlug = `${baseSlug}-${hash}`;
+    let uniqueSlug = baseSlug;
+    let counter = 1;
+    
+    // We need to use mongoose.models.User to check for existing slugs
+    const User = mongoose.models.User;
+    while (await User.exists({ authorSlug: uniqueSlug, _id: { $ne: this._id } })) {
+      uniqueSlug = `${baseSlug}-${counter}`;
+      counter++;
+    }
+    
+    this.authorSlug = uniqueSlug;
   }
 
   if (!this.isModified("password")) return next();

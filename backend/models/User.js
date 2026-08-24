@@ -44,7 +44,7 @@ UserSchema.virtual("isLocked").get(function () {
 UserSchema.pre("save", async function (next) {
   // Auto-generate authorSlug from name if missing or if name changed
   if (this.isModified("name") || !this.authorSlug) {
-    this.authorSlug = this.name
+    let baseSlug = this.name
       .toLowerCase()
       .trim()
       .replace(/[^\w\s-]/g, "")
@@ -52,12 +52,10 @@ UserSchema.pre("save", async function (next) {
       .replace(/-+/g, "-")
       .slice(0, 100);
       
-    // Quick append a random string to avoid collisons for now, proper uniqueness requires querying DB
+    // Quick append a random string to avoid collisions
     const crypto = require("crypto");
-    if (this.isNew || this.isModified("name")) {
-        const hash = crypto.randomBytes(3).toString('hex');
-        this.authorSlug = `${this.authorSlug}-${hash}`;
-    }
+    const hash = crypto.randomBytes(3).toString('hex');
+    this.authorSlug = `${baseSlug}-${hash}`;
   }
 
   if (!this.isModified("password")) return next();

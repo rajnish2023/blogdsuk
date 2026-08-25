@@ -29,10 +29,7 @@ const strongPassword = (field) =>
     .withMessage("Password needs an uppercase letter")
     .matches(/[0-9]/)
     .withMessage("Password needs a number");
-
-// --- Self-service profile routes ---
-// IMPORTANT: these must be declared before "/:id" routes below, otherwise
-// Express would match "/me" as an :id parameter and route it to the wrong handler.
+ 
 router.get("/me", getMyProfile);
 
 router.patch(
@@ -53,10 +50,7 @@ router.patch(
   validate,
   changeMyPassword
 );
-
-// Lightweight author list for the blog's "reassign author" dropdown —
-// gated by blog:edit rather than users:view, since managing a team and
-// reassigning a post's byline are different concerns.
+ 
 router.get("/authors", authorize("blog:edit"), listAuthors);
 
 // --- Admin-managed team routes ---

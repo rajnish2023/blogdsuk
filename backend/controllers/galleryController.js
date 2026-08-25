@@ -2,6 +2,10 @@ const fs = require("fs");
 const path = require("path");
 const Media = require("../models/Media");
 
+const uploadDir = process.env.UPLOAD_PATH 
+  ? path.resolve(process.env.UPLOAD_PATH) 
+  : path.join(__dirname, "..", "uploads");
+
 const buildUrl = (req, fileName) =>
   `${req.protocol}://${req.get("host")}/uploads/${fileName}`;
  
@@ -91,7 +95,7 @@ exports.deleteMedia = async (req, res) => {
     const item = await Media.findById(req.params.id);
     if (!item) return res.status(404).json({ message: "File not found" });
 
-    const filePath = path.join(__dirname, "..", "uploads", item.fileName);
+    const filePath = path.join(uploadDir, item.fileName);
     if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
 
     await item.deleteOne();
@@ -107,7 +111,7 @@ exports.downloadMedia = async (req, res) => {
     const item = await Media.findById(req.params.id);
     if (!item) return res.status(404).json({ message: "File not found" });
 
-    const filePath = path.join(__dirname, "..", "uploads", item.fileName);
+    const filePath = path.join(uploadDir, item.fileName);
     if (!fs.existsSync(filePath)) {
       return res.status(404).json({ message: "File missing on server" });
     }
@@ -128,7 +132,7 @@ exports.bulkDeleteMedia = async (req, res) => {
     
     // Delete files from file system
     for (const item of items) {
-      const filePath = path.join(__dirname, "..", "uploads", item.fileName);
+      const filePath = path.join(uploadDir, item.fileName);
       if (fs.existsSync(filePath)) {
         fs.unlinkSync(filePath);
       }

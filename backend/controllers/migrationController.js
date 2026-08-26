@@ -145,7 +145,12 @@ async function downloadAndMapUrl(oldUrl) {
   const domainMatch = oldUrl.match(/https?:\/\/blognew\.dynamicssquare\.(ca|com)\/(public\/)?upload\/(.+)/);
   if (domainMatch) {
     const rel = domainMatch[3];
-    const localDest = path.join(__dirname, "..", "uploads", rel);
+    
+    const uploadDir = process.env.UPLOAD_PATH 
+      ? path.resolve(process.env.UPLOAD_PATH) 
+      : path.join(__dirname, "..", "uploads");
+      
+    const localDest = path.join(uploadDir, rel);
     const localUrl = `/uploads/${rel}`;
     if (fs.existsSync(localDest)) return localUrl;
     try { await downloadFile(oldUrl, localDest); return localUrl; }
@@ -364,7 +369,7 @@ exports.runMigration = async (req, res) => {
       const localExcerpt = await downloadAndReplaceHtmlUrls(sqlBlog.short_description || "");
       const tags = sqlBlog.meta_tags ? sqlBlog.meta_tags.split(",").map((t) => t.trim()).filter(Boolean) : [];
 
-      blog = await Blog.create({
+      const blogDoc = {
         title: (sqlBlog.title || "").substring(0, 200),
         slug: sqlBlog.title_slug,
         content: localContent,
@@ -382,9 +387,12 @@ exports.runMigration = async (req, res) => {
         author: authorId,
         readingTimeMinutes: readingTime,
         publishedAt: sqlBlog.created_at ? new Date(sqlBlog.created_at) : new Date(),
-        createdAt: sqlBlog.created_at ? new Date(sqlBlog.created_at) : undefined,
-        updatedAt: sqlBlog.updated_at ? new Date(sqlBlog.updated_at) : undefined,
-      });
+        createdAt: sqlBlog.created_at ? new Date(sqlBlog.created_at) : new Date(),
+        updatedAt: sqlBlog.updated_at ? new Date(sqlBlog.updated_at) : new Date(),
+      };
+      
+      const result = await Blog.collection.insertOne(blogDoc);
+      blog = { ...blogDoc, _id: result.insertedId };
       imported++;
       send("stage", { stage: "blogs", total: data.blogs.length, done: idx + 1, current: blog.title, skipped: false });
     }

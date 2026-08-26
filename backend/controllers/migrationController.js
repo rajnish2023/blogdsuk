@@ -386,7 +386,7 @@ exports.runMigration = async (req, res) => {
         status: parseInt(sqlBlog.status, 10) === 1 ? "published" : "draft",
         author: authorId,
         readingTimeMinutes: readingTime,
-        publishedAt: sqlBlog.created_at ? new Date(sqlBlog.created_at) : new Date(),
+        publishedAt: sqlBlog.publish_date ? new Date(sqlBlog.publish_date) : (sqlBlog.created_at ? new Date(sqlBlog.created_at) : new Date()),
         createdAt: sqlBlog.created_at ? new Date(sqlBlog.created_at) : new Date(),
         updatedAt: sqlBlog.updated_at ? new Date(sqlBlog.updated_at) : new Date(),
       };

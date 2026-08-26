@@ -8,7 +8,6 @@ const validate = require("../middleware/validate");
 
 router.post(
   "/login",
-  authLimiter,
   [
     body("email").isEmail().withMessage("Enter a valid email").normalizeEmail(),
     body("password").notEmpty().withMessage("Password is required"),
@@ -19,7 +18,6 @@ router.post(
 
 router.post(
   "/forgot-password",
-  authLimiter,
   [body("email").isEmail().withMessage("Enter a valid email").normalizeEmail()],
   validate,
   forgotPassword

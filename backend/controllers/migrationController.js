@@ -169,7 +169,31 @@ async function downloadAndReplaceHtmlUrls(html) {
     const localUrl = await downloadAndMapUrl(oldUrl);
     result = result.split(oldUrl).join(localUrl);
   }
-  return result;
+  // Clean up inline CSS (strip style="..." entirely)
+  result = result.replace(/\sstyle\s*=\s*("|')[^"']*("|')/gi, "");
+  
+  // Clean up completely empty tags (h1-h6, p, div, span, strong, b, em, i)
+  // We use a while loop to catch deeply nested empty tags like <div><p><br></p></div>
+  const emptyTagRegex = /<(p|h[1-6]|div|span|strong|em|b|i)[^>]*>(?:\s|&nbsp;|<br\s*\/?>)*<\/\1>/gi;
+  let previousResult;
+  do {
+    previousResult = result;
+    result = result.replace(emptyTagRegex, "");
+  } while (result !== previousResult);
+  
+  // Add proper formatting: Insert newlines BEFORE and AFTER major block tags so it's perfectly readable in the editor!
+  result = result.replace(/>\s*</g, "><"); // First, strip all weird arbitrary spacing between tags
+  
+  // Newline BEFORE opening tags
+  result = result.replace(/(<(p|h[1-6]|div|ul|ol|li|table|blockquote|figure)[^>]*>)/gi, "\n$1");
+  
+  // Newline AFTER closing tags
+  result = result.replace(/(<\/(p|h[1-6]|div|ul|ol|li|table|blockquote|figure)>)/gi, "$1\n");
+  
+  // Strip any accidental double-newlines created by nesting
+  result = result.replace(/\n\s*\n/g, "\n");
+
+  return result.trim();
 }
  
 exports.runMigration = async (req, res) => {
@@ -264,6 +288,17 @@ exports.runMigration = async (req, res) => {
           counter++;
         }
         
+        let userSchema = [];
+        if (sqlUser.schema_script || sqlUser._script) {
+          const rawScript = sqlUser.schema_script || sqlUser._script;
+          const rx = /<script\b[^>]*type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/gi;
+          let m; let found = false;
+          while ((m = rx.exec(rawScript.trim())) !== null) {
+            if (m[1].trim()) { userSchema.push({ type: "Person", json: m[1].trim() }); found = true; }
+          }
+          if (!found && rawScript.trim()) userSchema.push({ type: "Person", json: rawScript.trim() });
+        }
+        
         const userDoc = {
           name: (sqlUser.name || "").substring(0, 100),
           email: sqlUser.email,
@@ -274,6 +309,7 @@ exports.runMigration = async (req, res) => {
           designation: (sqlUser.role_name || "").substring(0, 100),
           avatarUrl: avatarLocalUrl || "",
           authorSlug: uniqueSlug,
+          schemaMarkup: userSchema,
           socialLinks: {
             linkedin: sqlUser.linkedin || sqlUser.linkedin_url || "",
             twitter: sqlUser.twitter || sqlUser.twitter_url || "",
@@ -394,7 +430,7 @@ exports.runMigration = async (req, res) => {
         readingTimeMinutes: readingTime,
         publishedAt: sqlBlog.publish_date ? new Date(sqlBlog.publish_date) : (sqlBlog.created_at ? new Date(sqlBlog.created_at) : new Date()),
         createdAt: sqlBlog.created_at ? new Date(sqlBlog.created_at) : new Date(),
-        updatedAt: sqlBlog.updated_at ? new Date(sqlBlog.updated_at) : new Date(),
+        updatedAt: sqlBlog.updated_at ? new Date(sqlBlog.updated_at) : null,
       };
       
       const result = await Blog.collection.insertOne(blogDoc);

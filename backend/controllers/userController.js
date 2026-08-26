@@ -14,6 +14,7 @@ const sanitize = (user) => ({
   lastLogin: user.lastLogin,
   createdAt: user.createdAt,
   socialLinks: user.socialLinks || { linkedin: "", twitter: "", facebook: "", instagram: "" },
+  schemaMarkup: user.schemaMarkup || [],
   role: user.role && { id: user.role._id, name: user.role.name, isSuperAdmin: user.role.isSuperAdmin },
 });
  

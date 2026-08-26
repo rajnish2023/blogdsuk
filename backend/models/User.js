@@ -26,6 +26,16 @@ const UserSchema = new mongoose.Schema(
       facebook: { type: String, trim: true, default: "" },
       instagram: { type: String, trim: true, default: "" },
     },
+    schemaMarkup: [
+      {
+        type: {
+          type: String,
+          enum: ["Person", "Custom"],
+          default: "Person",
+        },
+        json: { type: String, default: "" },
+      },
+    ],
 
     lastLogin: { type: Date },
 

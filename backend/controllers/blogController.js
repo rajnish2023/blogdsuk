@@ -35,7 +35,7 @@ const readingTime = (content) => {
 
 const populateOpts = [
   { path: "category", select: "name slug color" },
-  { path: "author", select: "name avatarUrl avatarColor designation authorSlug socialLinks about" },
+  { path: "author", select: "name avatarUrl avatarColor designation authorSlug socialLinks about schemaMarkup" },
 ];
 
 // GET /api/blogs?search=&category=&status=&page=

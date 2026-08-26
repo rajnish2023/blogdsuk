@@ -3,7 +3,7 @@ const Blog = require("../models/Blog");
 const Category = require("../models/Category");
 const User = require("../models/User");
 
-const SAFE_AUTHOR_FIELDS = "name designation avatarUrl avatarColor about";
+const SAFE_AUTHOR_FIELDS = "name designation avatarUrl avatarColor about authorSlug socialLinks";
 
 const SAFE_CATEGORY_FIELDS = "name slug description color";
 

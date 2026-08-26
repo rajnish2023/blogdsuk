@@ -13,6 +13,7 @@ const sanitize = (user) => ({
   about: user.about,
   lastLogin: user.lastLogin,
   createdAt: user.createdAt,
+  socialLinks: user.socialLinks || { linkedin: "", twitter: "", facebook: "", instagram: "" },
   role: user.role && { id: user.role._id, name: user.role.name, isSuperAdmin: user.role.isSuperAdmin },
 });
  

@@ -273,7 +273,13 @@ exports.runMigration = async (req, res) => {
           about: (sqlUser.about || "").substring(0, 500),
           designation: (sqlUser.role_name || "").substring(0, 100),
           avatarUrl: avatarLocalUrl || "",
-          authorSlug: uniqueSlug
+          authorSlug: uniqueSlug,
+          socialLinks: {
+            linkedin: sqlUser.linkedin || sqlUser.linkedin_url || "",
+            twitter: sqlUser.twitter || sqlUser.twitter_url || "",
+            facebook: sqlUser.facebook || sqlUser.facebook_url || "",
+            instagram: sqlUser.instagram || sqlUser.instagram_url || "",
+          }
         };
         const result = await User.collection.insertOne(userDoc);
         user = { ...userDoc, _id: result.insertedId };

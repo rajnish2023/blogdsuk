@@ -20,6 +20,12 @@ const UserSchema = new mongoose.Schema(
     designation: { type: String, trim: true, maxlength: 100, default: "" }, // set by admin
     about: { type: String, trim: true, maxlength: 500, default: "" }, // self-editable bio
     authorSlug: { type: String, trim: true, unique: true, sparse: true },
+    socialLinks: {
+      linkedin: { type: String, trim: true, default: "" },
+      twitter: { type: String, trim: true, default: "" },
+      facebook: { type: String, trim: true, default: "" },
+      instagram: { type: String, trim: true, default: "" },
+    },
 
     lastLogin: { type: Date },
 

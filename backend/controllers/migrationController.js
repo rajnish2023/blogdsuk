@@ -141,10 +141,10 @@ function downloadFile(url, destPath) {
 
 async function downloadAndMapUrl(oldUrl) {
   if (!oldUrl || typeof oldUrl !== "string") return oldUrl;
-  // Match either .ca or .com domain and support optional /public/ prefix before upload/
-  const domainMatch = oldUrl.match(/https?:\/\/blognew\.dynamicssquare\.(ca|com)\/(public\/)?upload\/(.+)/);
+  // Match any TLD (.com, .ca, .co.uk, etc) and support optional /public/ prefix before upload/
+  const domainMatch = oldUrl.match(/https?:\/\/blognew\.dynamicssquare\.[a-z.]+\/(public\/)?upload\/(.+)/);
   if (domainMatch) {
-    const rel = domainMatch[3];
+    const rel = domainMatch[2];
     
     const uploadDir = process.env.UPLOAD_PATH 
       ? path.resolve(process.env.UPLOAD_PATH) 
@@ -161,8 +161,8 @@ async function downloadAndMapUrl(oldUrl) {
 
 async function downloadAndReplaceHtmlUrls(html) {
   if (!html) return html;
-  // Match both .ca and .com domains with optional /public/ prefix
-  const urlRegex = /https?:\/\/blognew\.dynamicssquare\.(ca|com)\/(public\/)?upload\/[^\s"'>\)]+/g;
+  // Match any TLD (.com, .ca, .co.uk, etc) with optional /public/ prefix
+  const urlRegex = /https?:\/\/blognew\.dynamicssquare\.[a-z.]+\/(public\/)?upload\/[^\s"'>\)]+/g;
   const urls = [...new Set(html.match(urlRegex) || [])];
   let result = html;
   for (const oldUrl of urls) {
@@ -257,10 +257,14 @@ exports.runMigration = async (req, res) => {
     send("stage", { stage: "categories", total: data.blog_categories.length, done: 0 });
     for (let idx = 0; idx < data.blog_categories.length; idx++) {
       const sqlCat = data.blog_categories[idx];
-      let cat = await Category.findOne({ slug: sqlCat.category_slug });
+      const catName = (sqlCat.category_name || "").substring(0, 60);
+      let cat = await Category.findOne({
+        $or: [{ slug: sqlCat.category_slug }, { name: catName }]
+      });
+      
       if (!cat) {
         cat = await Category.create({
-          name: (sqlCat.category_name || "").substring(0, 60),
+          name: catName,
           slug: sqlCat.category_slug,
           description: `Migrated: ${sqlCat.category_name}`.substring(0, 200),
           color: "#3355FF",
@@ -378,8 +382,13 @@ exports.runMigration = async (req, res) => {
  
       let catId = null;
       if (sqlBlog.category_slug) {
-        let cat = await Category.findOne({ slug: sqlBlog.category_slug });
-        if (!cat && sqlBlog.category) cat = await Category.create({ name: (sqlBlog.category || "").substring(0, 60), slug: sqlBlog.category_slug, color: "#3355FF" });
+        const fallbackCatName = (sqlBlog.category || "").substring(0, 60);
+        let cat = await Category.findOne({
+          $or: [{ slug: sqlBlog.category_slug }, ...(fallbackCatName ? [{ name: fallbackCatName }] : [])]
+        });
+        if (!cat && fallbackCatName) {
+          cat = await Category.create({ name: fallbackCatName, slug: sqlBlog.category_slug, color: "#3355FF" });
+        }
         if (cat) catId = cat._id;
       }
  

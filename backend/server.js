@@ -76,7 +76,7 @@ app.use("/api/estimator", estimatorRoutes);
 
 app.use("/api", publicEstimatorRoutes);
 
-// Temporary manual seed route for free Render tier
+// Temporary manual seed route
 const { runSeed } = require("./scripts/seed");
 app.get("/api/seed-database-init", async (req, res) => {
   try {

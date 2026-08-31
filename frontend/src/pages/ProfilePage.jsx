@@ -11,6 +11,11 @@ export default function ProfilePage() {
 
   const [name, setName] = useState(user?.name || "");
   const [about, setAbout] = useState(user?.about || "");
+  
+  const [socialLinks, setSocialLinks] = useState(user?.socialLinks || { linkedin: "", twitter: "", facebook: "", instagram: "" });
+  const initialSchemaJson = (user?.schemaMarkup || []).find(s => s.type === "Person")?.json || "";
+  const [schemaJson, setSchemaJson] = useState(initialSchemaJson);
+
   const [savingProfile, setSavingProfile] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
 
@@ -45,7 +50,12 @@ export default function ProfilePage() {
     e.preventDefault();
     setSavingProfile(true);
     try {
-      const updated = await updateMyProfile({ name, about });
+      const updated = await updateMyProfile({ 
+        name, 
+        about,
+        socialLinks,
+        schemaMarkup: schemaJson ? [{ type: "Person", json: schemaJson }] : []
+      });
       updateUserLocal(updated);
       showToast("Profile saved");
     } catch (err) {
@@ -146,6 +156,67 @@ export default function ProfilePage() {
                   className="w-full resize-none rounded-lg border border-paper-line bg-paper px-3 py-2.5 text-sm text-ink placeholder:text-muted/70 focus:border-signal"
                 />
               </div>
+            </div>
+            
+            <hr className="my-6 border-paper-line" />
+            
+            <h3 className="font-display text-sm font-semibold text-ink">Social Links</h3>
+            <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div>
+                <label className="mb-1.5 block text-xs font-medium text-muted">LinkedIn URL</label>
+                <input
+                  type="url"
+                  placeholder="https://linkedin.com/in/..."
+                  value={socialLinks.linkedin}
+                  onChange={(e) => setSocialLinks(s => ({ ...s, linkedin: e.target.value }))}
+                  className="w-full rounded-lg border border-paper-line bg-paper px-3 py-2.5 text-sm text-ink focus:border-signal"
+                />
+              </div>
+              <div>
+                <label className="mb-1.5 block text-xs font-medium text-muted">Twitter / X URL</label>
+                <input
+                  type="url"
+                  placeholder="https://twitter.com/..."
+                  value={socialLinks.twitter}
+                  onChange={(e) => setSocialLinks(s => ({ ...s, twitter: e.target.value }))}
+                  className="w-full rounded-lg border border-paper-line bg-paper px-3 py-2.5 text-sm text-ink focus:border-signal"
+                />
+              </div>
+              <div>
+                <label className="mb-1.5 block text-xs font-medium text-muted">Facebook URL</label>
+                <input
+                  type="url"
+                  placeholder="https://facebook.com/..."
+                  value={socialLinks.facebook}
+                  onChange={(e) => setSocialLinks(s => ({ ...s, facebook: e.target.value }))}
+                  className="w-full rounded-lg border border-paper-line bg-paper px-3 py-2.5 text-sm text-ink focus:border-signal"
+                />
+              </div>
+              <div>
+                <label className="mb-1.5 block text-xs font-medium text-muted">Instagram URL</label>
+                <input
+                  type="url"
+                  placeholder="https://instagram.com/..."
+                  value={socialLinks.instagram}
+                  onChange={(e) => setSocialLinks(s => ({ ...s, instagram: e.target.value }))}
+                  className="w-full rounded-lg border border-paper-line bg-paper px-3 py-2.5 text-sm text-ink focus:border-signal"
+                />
+              </div>
+            </div>
+
+            <hr className="my-6 border-paper-line" />
+            
+            <h3 className="font-display text-sm font-semibold text-ink">SEO / Schema Markup</h3>
+            <div className="mt-4">
+              <label className="mb-1.5 block text-xs font-medium text-muted">Person JSON-LD (Optional)</label>
+              <textarea
+                value={schemaJson}
+                onChange={(e) => setSchemaJson(e.target.value)}
+                rows={6}
+                placeholder={`{\n  "@context": "https://schema.org",\n  "@type": "Person",\n  "name": "Your Name"\n}`}
+                className="w-full resize-y rounded-lg border border-paper-line bg-paper px-3 py-2.5 font-mono text-xs text-ink placeholder:text-muted/70 focus:border-signal"
+              />
+              <p className="mt-1.5 text-xs text-muted">Custom JSON-LD schema injected into your author profile page.</p>
             </div>
             <div className="mt-5 flex justify-end">
               <button type="submit" disabled={savingProfile} className="btn-primary disabled:opacity-60">

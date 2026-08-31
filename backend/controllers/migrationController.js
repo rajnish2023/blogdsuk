@@ -141,11 +141,16 @@ function downloadFile(url, destPath) {
 
 async function downloadAndMapUrl(oldUrl) {
   if (!oldUrl || typeof oldUrl !== "string") return oldUrl;
-  // Match either .ca or .com domain and support optional /public/ prefix before upload/
-  const domainMatch = oldUrl.match(/https?:\/\/blognew\.dynamicssquare\.(ca|com)\/(public\/)?upload\/(.+)/);
+  // Match any TLD (.com, .ca, .co.uk, etc) and support optional /public/ prefix before upload/
+  const domainMatch = oldUrl.match(/https?:\/\/blognew\.dynamicssquare\.[a-z.]+\/(public\/)?upload\/(.+)/);
   if (domainMatch) {
-    const rel = domainMatch[3];
-    const localDest = path.join(__dirname, "..", "uploads", rel);
+    const rel = domainMatch[2];
+    
+    const uploadDir = process.env.UPLOAD_PATH 
+      ? path.resolve(process.env.UPLOAD_PATH) 
+      : path.join(__dirname, "..", "uploads");
+      
+    const localDest = path.join(uploadDir, rel);
     const localUrl = `/uploads/${rel}`;
     if (fs.existsSync(localDest)) return localUrl;
     try { await downloadFile(oldUrl, localDest); return localUrl; }
@@ -156,15 +161,39 @@ async function downloadAndMapUrl(oldUrl) {
 
 async function downloadAndReplaceHtmlUrls(html) {
   if (!html) return html;
-  // Match both .ca and .com domains with optional /public/ prefix
-  const urlRegex = /https?:\/\/blognew\.dynamicssquare\.(ca|com)\/(public\/)?upload\/[^\s"'>\)]+/g;
+  // Match any TLD (.com, .ca, .co.uk, etc) with optional /public/ prefix
+  const urlRegex = /https?:\/\/blognew\.dynamicssquare\.[a-z.]+\/(public\/)?upload\/[^\s"'>\)]+/g;
   const urls = [...new Set(html.match(urlRegex) || [])];
   let result = html;
   for (const oldUrl of urls) {
     const localUrl = await downloadAndMapUrl(oldUrl);
     result = result.split(oldUrl).join(localUrl);
   }
-  return result;
+  // Clean up inline CSS (strip style="..." entirely)
+  result = result.replace(/\sstyle\s*=\s*("|')[^"']*("|')/gi, "");
+  
+  // Clean up completely empty tags (h1-h6, p, div, span, strong, b, em, i)
+  // We use a while loop to catch deeply nested empty tags like <div><p><br></p></div>
+  const emptyTagRegex = /<(p|h[1-6]|div|span|strong|em|b|i)[^>]*>(?:\s|&nbsp;|<br\s*\/?>)*<\/\1>/gi;
+  let previousResult;
+  do {
+    previousResult = result;
+    result = result.replace(emptyTagRegex, "");
+  } while (result !== previousResult);
+  
+  // Add proper formatting: Insert newlines BEFORE and AFTER major block tags so it's perfectly readable in the editor!
+  result = result.replace(/>\s*</g, "><"); // First, strip all weird arbitrary spacing between tags
+  
+  // Newline BEFORE opening tags
+  result = result.replace(/(<(p|h[1-6]|div|ul|ol|li|table|blockquote|figure)[^>]*>)/gi, "\n$1");
+  
+  // Newline AFTER closing tags
+  result = result.replace(/(<\/(p|h[1-6]|div|ul|ol|li|table|blockquote|figure)>)/gi, "$1\n");
+  
+  // Strip any accidental double-newlines created by nesting
+  result = result.replace(/\n\s*\n/g, "\n");
+
+  return result.trim();
 }
  
 exports.runMigration = async (req, res) => {
@@ -228,10 +257,14 @@ exports.runMigration = async (req, res) => {
     send("stage", { stage: "categories", total: data.blog_categories.length, done: 0 });
     for (let idx = 0; idx < data.blog_categories.length; idx++) {
       const sqlCat = data.blog_categories[idx];
-      let cat = await Category.findOne({ slug: sqlCat.category_slug });
+      const catName = (sqlCat.category_name || "").substring(0, 60);
+      let cat = await Category.findOne({
+        $or: [{ slug: sqlCat.category_slug }, { name: catName }]
+      });
+      
       if (!cat) {
         cat = await Category.create({
-          name: (sqlCat.category_name || "").substring(0, 60),
+          name: catName,
           slug: sqlCat.category_slug,
           description: `Migrated: ${sqlCat.category_name}`.substring(0, 200),
           color: "#3355FF",
@@ -249,6 +282,27 @@ exports.runMigration = async (req, res) => {
       if (!user) {
         const isAdmin = (sqlUser.name || "").toLowerCase() === "admin" || (sqlUser.email || "").toLowerCase().includes("admin");
         const avatarLocalUrl = await downloadAndMapUrl(sqlUser.profile_photo_path);
+        
+        const baseSlug = (sqlUser.name || "").toLowerCase().trim().replace(/[^\w\s-]/g, "").replace(/[\s_]+/g, "-").replace(/-+/g, "-").slice(0, 100);
+        
+        let uniqueSlug = baseSlug;
+        let counter = 1;
+        while (await User.findOne({ authorSlug: uniqueSlug })) {
+          uniqueSlug = `${baseSlug}-${counter}`;
+          counter++;
+        }
+        
+        let userSchema = [];
+        if (sqlUser.schema_script || sqlUser._script) {
+          const rawScript = sqlUser.schema_script || sqlUser._script;
+          const rx = /<script\b[^>]*type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/gi;
+          let m; let found = false;
+          while ((m = rx.exec(rawScript.trim())) !== null) {
+            if (m[1].trim()) { userSchema.push({ type: "Person", json: m[1].trim() }); found = true; }
+          }
+          if (!found && rawScript.trim()) userSchema.push({ type: "Person", json: rawScript.trim() });
+        }
+        
         const userDoc = {
           name: (sqlUser.name || "").substring(0, 100),
           email: sqlUser.email,
@@ -258,6 +312,14 @@ exports.runMigration = async (req, res) => {
           about: (sqlUser.about || "").substring(0, 500),
           designation: (sqlUser.role_name || "").substring(0, 100),
           avatarUrl: avatarLocalUrl || "",
+          authorSlug: uniqueSlug,
+          schemaMarkup: userSchema,
+          socialLinks: {
+            linkedin: sqlUser.linkedin || sqlUser.linkedin_url || "",
+            twitter: sqlUser.twitter || sqlUser.twitter_url || "",
+            facebook: sqlUser.facebook || sqlUser.facebook_url || "",
+            instagram: sqlUser.instagram || sqlUser.instagram_url || "",
+          }
         };
         const result = await User.collection.insertOne(userDoc);
         user = { ...userDoc, _id: result.insertedId };
@@ -320,8 +382,13 @@ exports.runMigration = async (req, res) => {
  
       let catId = null;
       if (sqlBlog.category_slug) {
-        let cat = await Category.findOne({ slug: sqlBlog.category_slug });
-        if (!cat && sqlBlog.category) cat = await Category.create({ name: (sqlBlog.category || "").substring(0, 60), slug: sqlBlog.category_slug, color: "#3355FF" });
+        const fallbackCatName = (sqlBlog.category || "").substring(0, 60);
+        let cat = await Category.findOne({
+          $or: [{ slug: sqlBlog.category_slug }, ...(fallbackCatName ? [{ name: fallbackCatName }] : [])]
+        });
+        if (!cat && fallbackCatName) {
+          cat = await Category.create({ name: fallbackCatName, slug: sqlBlog.category_slug, color: "#3355FF" });
+        }
         if (cat) catId = cat._id;
       }
  
@@ -353,7 +420,7 @@ exports.runMigration = async (req, res) => {
       const localExcerpt = await downloadAndReplaceHtmlUrls(sqlBlog.short_description || "");
       const tags = sqlBlog.meta_tags ? sqlBlog.meta_tags.split(",").map((t) => t.trim()).filter(Boolean) : [];
 
-      blog = await Blog.create({
+      const blogDoc = {
         title: (sqlBlog.title || "").substring(0, 200),
         slug: sqlBlog.title_slug,
         content: localContent,
@@ -370,10 +437,13 @@ exports.runMigration = async (req, res) => {
         status: parseInt(sqlBlog.status, 10) === 1 ? "published" : "draft",
         author: authorId,
         readingTimeMinutes: readingTime,
-        publishedAt: sqlBlog.created_at ? new Date(sqlBlog.created_at) : new Date(),
-        createdAt: sqlBlog.created_at ? new Date(sqlBlog.created_at) : undefined,
-        updatedAt: sqlBlog.updated_at ? new Date(sqlBlog.updated_at) : undefined,
-      });
+        publishedAt: sqlBlog.publish_date ? new Date(sqlBlog.publish_date) : (sqlBlog.created_at ? new Date(sqlBlog.created_at) : new Date()),
+        createdAt: sqlBlog.created_at ? new Date(sqlBlog.created_at) : new Date(),
+        updatedAt: sqlBlog.updated_at ? new Date(sqlBlog.updated_at) : null,
+      };
+      
+      const result = await Blog.collection.insertOne(blogDoc);
+      blog = { ...blogDoc, _id: result.insertedId };
       imported++;
       send("stage", { stage: "blogs", total: data.blogs.length, done: idx + 1, current: blog.title, skipped: false });
     }

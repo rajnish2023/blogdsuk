@@ -13,6 +13,8 @@ const sanitize = (user) => ({
   about: user.about,
   lastLogin: user.lastLogin,
   createdAt: user.createdAt,
+  socialLinks: user.socialLinks || { linkedin: "", twitter: "", facebook: "", instagram: "" },
+  schemaMarkup: user.schemaMarkup || [],
   role: user.role && {
     id: user.role._id,
     name: user.role.name,
@@ -29,9 +31,23 @@ exports.getMyProfile = async (req, res) => {
  
 exports.updateMyProfile = async (req, res) => {
   try {
-    const { name, about } = req.body;
+    const { name, about, socialLinks, schemaMarkup } = req.body;
     if (name !== undefined) req.user.name = name;
     if (about !== undefined) req.user.about = about;
+    
+    if (socialLinks) {
+      req.user.socialLinks = {
+        linkedin: socialLinks.linkedin !== undefined ? socialLinks.linkedin : req.user.socialLinks?.linkedin,
+        twitter: socialLinks.twitter !== undefined ? socialLinks.twitter : req.user.socialLinks?.twitter,
+        facebook: socialLinks.facebook !== undefined ? socialLinks.facebook : req.user.socialLinks?.facebook,
+        instagram: socialLinks.instagram !== undefined ? socialLinks.instagram : req.user.socialLinks?.instagram,
+      };
+    }
+    
+    if (Array.isArray(schemaMarkup)) {
+      req.user.schemaMarkup = schemaMarkup;
+    }
+    
     await req.user.save();
     const populated = await req.user.populate("role");
     res.json({ user: sanitize(populated) });

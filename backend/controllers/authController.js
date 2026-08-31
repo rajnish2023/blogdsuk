@@ -18,6 +18,8 @@ const sanitizeUser = (user) => ({
   designation: user.designation,
   about: user.about,
   lastLogin: user.lastLogin,
+  socialLinks: user.socialLinks || { linkedin: "", twitter: "", facebook: "", instagram: "" },
+  schemaMarkup: user.schemaMarkup || [],
   role: user.role && {
     id: user.role._id,
     name: user.role.name,

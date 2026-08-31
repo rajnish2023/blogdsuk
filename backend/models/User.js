@@ -20,6 +20,22 @@ const UserSchema = new mongoose.Schema(
     designation: { type: String, trim: true, maxlength: 100, default: "" }, // set by admin
     about: { type: String, trim: true, maxlength: 500, default: "" }, // self-editable bio
     authorSlug: { type: String, trim: true, unique: true, sparse: true },
+    socialLinks: {
+      linkedin: { type: String, trim: true, default: "" },
+      twitter: { type: String, trim: true, default: "" },
+      facebook: { type: String, trim: true, default: "" },
+      instagram: { type: String, trim: true, default: "" },
+    },
+    schemaMarkup: [
+      {
+        type: {
+          type: String,
+          enum: ["Person", "Custom"],
+          default: "Person",
+        },
+        json: { type: String, default: "" },
+      },
+    ],
 
     lastLogin: { type: Date },
 
@@ -44,7 +60,7 @@ UserSchema.virtual("isLocked").get(function () {
 UserSchema.pre("save", async function (next) {
   // Auto-generate authorSlug from name if missing or if name changed
   if (this.isModified("name") || !this.authorSlug) {
-    this.authorSlug = this.name
+    let baseSlug = this.name
       .toLowerCase()
       .trim()
       .replace(/[^\w\s-]/g, "")
@@ -52,12 +68,17 @@ UserSchema.pre("save", async function (next) {
       .replace(/-+/g, "-")
       .slice(0, 100);
       
-    // Quick append a random string to avoid collisons for now, proper uniqueness requires querying DB
-    const crypto = require("crypto");
-    if (this.isNew || this.isModified("name")) {
-        const hash = crypto.randomBytes(3).toString('hex');
-        this.authorSlug = `${this.authorSlug}-${hash}`;
+    let uniqueSlug = baseSlug;
+    let counter = 1;
+    
+    // We need to use mongoose.models.User to check for existing slugs
+    const User = mongoose.models.User;
+    while (await User.exists({ authorSlug: uniqueSlug, _id: { $ne: this._id } })) {
+      uniqueSlug = `${baseSlug}-${counter}`;
+      counter++;
     }
+    
+    this.authorSlug = uniqueSlug;
   }
 
   if (!this.isModified("password")) return next();

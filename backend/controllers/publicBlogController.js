@@ -3,7 +3,7 @@ const Blog = require("../models/Blog");
 const Category = require("../models/Category");
 const User = require("../models/User");
 
-const SAFE_AUTHOR_FIELDS = "name designation avatarUrl avatarColor about";
+const SAFE_AUTHOR_FIELDS = "name designation avatarUrl avatarColor about authorSlug socialLinks schemaMarkup";
 
 const SAFE_CATEGORY_FIELDS = "name slug description color";
 
@@ -49,11 +49,12 @@ exports.listPublicBlogs = async (req, res) => {
 
     const [blogs, totalBlogs] = await Promise.all([
       Blog.find(query)
+        .select("title slug excerpt featuredImage readingTimeMinutes publishedAt updatedAt")
         .sort(sort)
         .skip(skip)
         .limit(limit)
-        .populate("category", SAFE_CATEGORY_FIELDS)
-        .populate("author", SAFE_AUTHOR_FIELDS)
+        .populate("category", "name slug")
+        .populate("author", "name authorSlug")
         .lean(),
       Blog.countDocuments(query),
     ]);
@@ -154,11 +155,12 @@ exports.getArchiveBlogs = async (req, res) => {
 
     const [blogs, totalDocs] = await Promise.all([
       Blog.find(query)
+        .select("title slug excerpt featuredImage readingTimeMinutes publishedAt updatedAt")
         .sort(sort)
         .skip(skip)
         .limit(limit)
-        .populate("category", SAFE_CATEGORY_FIELDS)
-        .populate("author", SAFE_AUTHOR_FIELDS)
+        .populate("category", "name slug")
+        .populate("author", "name authorSlug")
         .lean(),
       Blog.countDocuments(query),
     ]);
@@ -187,10 +189,11 @@ exports.getTrendingBlogs = async (req, res) => {
     const limit = Math.max(1, Math.min(50, parseInt(req.query.limit) || 5));
 
     const blogs = await Blog.find({ status: "published" })
+      .select("title slug excerpt featuredImage readingTimeMinutes publishedAt updatedAt")
       .sort({ views: -1, publishedAt: -1 })
       .limit(limit)
-      .populate("category", SAFE_CATEGORY_FIELDS)
-      .populate("author", SAFE_AUTHOR_FIELDS)
+      .populate("category", "name slug")
+      .populate("author", "name authorSlug")
       .lean();
 
     res.status(200).json(blogs);
@@ -216,12 +219,20 @@ exports.getRandomBlogs = async (req, res) => {
     // Get random samples
     pipeline.push({ $sample: { size: limit } });
 
+    pipeline.push({ 
+      $project: { 
+        title: 1, slug: 1, excerpt: 1, featuredImage: 1, 
+        readingTimeMinutes: 1, publishedAt: 1, updatedAt: 1, 
+        category: 1, author: 1 
+      } 
+    });
+
     const rawBlogs = await Blog.aggregate(pipeline);
 
     // Populate using Mongoose since aggregate doesn't do populate automatically
     const blogs = await Blog.populate(rawBlogs, [
-      { path: "category", select: SAFE_CATEGORY_FIELDS },
-      { path: "author", select: SAFE_AUTHOR_FIELDS },
+      { path: "category", select: "name slug" },
+      { path: "author", select: "name authorSlug" },
     ]);
 
     res.status(200).json(blogs);
@@ -248,11 +259,12 @@ exports.getBlogsByCategory = async (req, res) => {
 
     const [blogs, totalBlogs] = await Promise.all([
       Blog.find(query)
+        .select("title slug excerpt featuredImage readingTimeMinutes publishedAt updatedAt")
         .sort({ publishedAt: -1, createdAt: -1 })
         .skip(skip)
         .limit(limit)
-        .populate("category", SAFE_CATEGORY_FIELDS)
-        .populate("author", SAFE_AUTHOR_FIELDS)
+        .populate("category", "name slug")
+        .populate("author", "name authorSlug")
         .lean(),
       Blog.countDocuments(query),
     ]);
@@ -303,11 +315,12 @@ exports.getBlogsByAuthor = async (req, res) => {
 
     const [blogs, totalBlogs] = await Promise.all([
       Blog.find(query)
+        .select("title slug excerpt featuredImage readingTimeMinutes publishedAt updatedAt")
         .sort({ publishedAt: -1, createdAt: -1 })
         .skip(skip)
         .limit(limit)
-        .populate("category", SAFE_CATEGORY_FIELDS)
-        .populate("author", SAFE_AUTHOR_FIELDS)
+        .populate("category", "name slug")
+        .populate("author", "name authorSlug")
         .lean(),
       Blog.countDocuments(query),
     ]);

@@ -23,6 +23,10 @@ const publicBlogRoutes = require("./routes/publicBlogRoutes");
 const publicContactRoutes = require("./routes/publicContactRoutes");
 const publicSettingRoutes = require("./routes/publicSettingRoutes");
 const settingRoutes = require("./routes/settingRoutes");
+const licensingRoutes = require("./routes/licensingRoutes");
+const publicLicensingRoutes = require("./routes/publicLicensingRoutes");
+const estimatorRoutes = require("./routes/estimatorRoutes");
+const publicEstimatorRoutes = require("./routes/publicEstimatorRoutes");
 const { apiLimiter } = require("./middleware/rateLimiter");
 
 const app = express();
@@ -67,6 +71,11 @@ app.use("/api/public/blogs", publicBlogRoutes);
 app.use("/api/public", publicContactRoutes);
 app.use("/api/public", publicSettingRoutes);
 app.use("/api/settings", settingRoutes);
+app.use("/api/licensing", licensingRoutes);
+app.use("/api/public/licensing", publicLicensingRoutes);
+app.use("/api/estimator", estimatorRoutes);
+
+app.use("/api", publicEstimatorRoutes);
 
 // Temporary manual seed route for free Render tier
 const { runSeed } = require("./scripts/seed");

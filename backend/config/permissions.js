@@ -24,6 +24,18 @@ const PERMISSIONS = [
   { key: "pages:edit", module: "Pages", action: "Edit", description: "Edit existing webpages" },
   { key: "pages:delete", module: "Pages", action: "Delete", description: "Delete webpages" },
   { key: "pages:publish", module: "Pages", action: "Publish", description: "Publish or unpublish webpages" },
+
+  { key: "licensing:view", module: "Licensing", action: "View", description: "View licence calculator enquiries and rate card pricing" },
+  { key: "licensing:manage", module: "Licensing", action: "Manage", description: "Update the status and notes on licence enquiries" },
+  { key: "licensing:delete", module: "Licensing", action: "Delete", description: "Delete licence calculator enquiries" },
+  { key: "licensing:pricing", module: "Licensing", action: "Pricing", description: "Edit the published Dynamics 365 licence rates" },
+  { key: "licensing:catalogue", module: "Licensing", action: "Catalogue", description: "Add, edit and reorder the capabilities and groups on the rate card" },
+
+  { key: "estimator:view", module: "Price Estimator", action: "View", description: "View price estimators, their questions and pricing" },
+  { key: "estimator:create", module: "Price Estimator", action: "Create", description: "Create new price estimators" },
+  { key: "estimator:edit", module: "Price Estimator", action: "Edit", description: "Edit estimator questions, pricing and result page copy" },
+  { key: "estimator:delete", module: "Price Estimator", action: "Delete", description: "Delete price estimators and their submissions" },
+  { key: "estimator:responses", module: "Price Estimator", action: "Responses", description: "View estimator submissions and re-send report emails" },
 ];
 
 const PERMISSION_KEYS = PERMISSIONS.map((p) => p.key);

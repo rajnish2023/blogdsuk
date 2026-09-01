@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { X, Mail, Building2, CalendarClock, Trash2, Save } from "lucide-react";
+import { X, Mail, Building2, CalendarClock, Trash2, Save, Phone } from "lucide-react";
 import { LeadStatusBadge, PlatformBadge, LEAD_STATUSES } from "./Badges";
 import { formatDate } from "../../utils/format";
 
@@ -65,6 +65,11 @@ export default function EnquiryDetailModal({ lead, onClose, onSave, onDelete, ca
               <a href={`mailto:${lead.email}`} className="inline-flex items-center gap-1.5 hover:text-signal">
                 <Mail size={12} /> {lead.email}
               </a>
+              {lead.phone && (
+                <a href={`tel:${lead.phone.replace(/\s+/g, "")}`} className="inline-flex items-center gap-1.5 hover:text-signal">
+                  <Phone size={12} /> {lead.phone}
+                </a>
+              )}
               {lead.company && (
                 <span className="inline-flex items-center gap-1.5">
                   <Building2 size={12} /> {lead.company}
@@ -126,6 +131,7 @@ export default function EnquiryDetailModal({ lead, onClose, onSave, onDelete, ca
             <Row label="Submitted">{formatDate(lead.createdAt)}</Row>
             <Row label="Currency">{lead.currency}</Row>
             <Row label="Source">{lead.source || "—"}</Row>
+            <Row label="Phone">{lead.phone || "—"}</Row>
             {lead.renewal && (
               <Row label="Renewal">
                 <span className="inline-flex items-center gap-1.5 text-flare">

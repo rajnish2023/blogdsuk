@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
 import {
-  ArrowLeft, Loader2, Save, Send, Pencil, ChevronRight,
+  ArrowLeft, Loader2, Save, Send, Pencil, ChevronRight, ChevronDown,
   PanelRightClose, PanelRightOpen, CheckCircle2, CloudOff,
 } from "lucide-react";
 import TipTapEditor from "../components/Blog/TipTapEditor";
@@ -45,6 +45,7 @@ export default function BlogEditorPage() {
   const postIdRef = useRef(id || null);
   const initialLoadDone = useRef(false);
   const formRef = useRef(null);
+  const titleRef = useRef(null);
   formRef.current = null; // will be set after form state is declared
 
   const [form, setForm] = useState({
@@ -63,6 +64,14 @@ export default function BlogEditorPage() {
 
   // Keep formRef in sync
   formRef.current = form;
+
+  // Auto-resize title textarea
+  useEffect(() => {
+    if (titleRef.current) {
+      titleRef.current.style.height = "auto";
+      titleRef.current.style.height = titleRef.current.scrollHeight + "px";
+    }
+  }, [form.title]);
 
   useEffect(() => {
     fetchCategories().then(setCategories).catch(() => {});
@@ -288,12 +297,21 @@ export default function BlogEditorPage() {
           <div className="mx-auto flex w-full max-w-4xl flex-1 flex-col px-4 py-5 lg:px-8">
             {/* Title + Slug */}
             <div className="mb-4 rounded-2xl border border-paper-line bg-paper-card p-5 shadow-card">
-              <input
-                value={form.title}
-                onChange={handleTitleChange}
-                placeholder="Post title"
-                className="w-full border-none bg-transparent font-display text-2xl font-semibold text-ink placeholder:text-muted/50 focus:outline-none"
-              />
+              <div className="group/title relative flex">
+                <textarea
+                  ref={titleRef}
+                  value={form.title}
+                  onChange={handleTitleChange}
+                  placeholder="Post title"
+                  rows={1}
+                  className="w-full resize-none overflow-hidden border-none bg-transparent font-display text-2xl font-semibold text-ink placeholder:text-muted/50 focus:outline-none pr-8"
+                />
+                <Pencil 
+                  size={16} 
+                  className="absolute right-2 top-2 text-muted opacity-0 transition-opacity group-hover/title:opacity-40 cursor-pointer hover:!opacity-100"
+                  onClick={() => titleRef.current?.focus()}
+                />
+              </div>
               <div className="mt-2 flex items-center text-xs text-muted">
                 <span className="font-mono text-muted/50 mr-1">/</span>
                 <div className="group relative flex flex-1 items-center">
@@ -308,8 +326,26 @@ export default function BlogEditorPage() {
               </div>
             </div>
 
+            {/* Excerpt */}
+            <details className="mb-4 group bg-paper-card rounded-2xl border border-paper-line shadow-card overflow-hidden">
+              <summary className="cursor-pointer px-5 py-4 font-display text-sm font-semibold text-ink outline-none select-none flex items-center justify-between">
+                Excerpt
+                <ChevronDown size={16} className="text-muted transition-transform group-open:rotate-180" />
+              </summary>
+              <div className="px-5 pb-5 pt-2">
+                <textarea
+                  value={form.excerpt}
+                  onChange={(e) => setForm((f) => ({ ...f, excerpt: e.target.value }))}
+                  rows={3}
+                  maxLength={300}
+                  placeholder="Short summary shown in post listings — auto-generated from content if left blank"
+                  className="w-full resize-none rounded-lg border border-paper-line bg-paper px-3 py-2.5 text-sm text-ink placeholder:text-muted/70 focus:border-signal"
+                />
+              </div>
+            </details>
+
             {/* Editor (fills remaining height) */}
-            <div className="mb-4 flex-1">
+            <div className="mb-4 flex-1 flex flex-col min-h-[400px]">
               <TipTapEditor
                 value={form.content}
                 onChange={(html) => setForm((f) => ({ ...f, content: html }))}
@@ -317,26 +353,47 @@ export default function BlogEditorPage() {
               />
             </div>
 
-            {/* Excerpt */}
-            <div className="mb-4 rounded-2xl border border-paper-line bg-paper-card p-5 shadow-card">
-              <label className="mb-1.5 block text-xs font-medium text-muted">Excerpt</label>
-              <textarea
-                value={form.excerpt}
-                onChange={(e) => setForm((f) => ({ ...f, excerpt: e.target.value }))}
-                rows={3}
-                maxLength={300}
-                placeholder="Short summary shown in post listings — auto-generated from content if left blank"
-                className="w-full resize-none rounded-lg border border-paper-line bg-paper px-3 py-2.5 text-sm text-ink placeholder:text-muted/70 focus:border-signal"
-              />
-            </div>
-
             {/* FAQs */}
-            <div className="mb-4">
-              <FaqSection
-                faqs={form.faqs}
-                onChange={(faqs) => setForm((f) => ({ ...f, faqs }))}
-              />
-            </div>
+            <details className="mb-4 group bg-paper-card rounded-2xl border border-paper-line shadow-card overflow-hidden">
+              <summary className="cursor-pointer px-5 py-4 font-display text-sm font-semibold text-ink outline-none select-none flex items-center justify-between">
+                Frequently Asked Questions
+                <ChevronDown size={16} className="text-muted transition-transform group-open:rotate-180" />
+              </summary>
+              <div className="px-5 pb-5 pt-2 border-t border-paper-line">
+                <FaqSection
+                  faqs={form.faqs}
+                  onChange={(faqs) => setForm((f) => ({ ...f, faqs }))}
+                />
+              </div>
+            </details>
+
+            {/* SEO Panel */}
+            <details className="mb-4 group bg-paper-card rounded-2xl border border-paper-line shadow-card overflow-hidden" open>
+              <summary className="cursor-pointer px-5 py-4 font-display text-sm font-semibold text-ink outline-none select-none flex items-center justify-between">
+                SEO & Keyword Strength
+                <ChevronDown size={16} className="text-muted transition-transform group-open:rotate-180" />
+              </summary>
+              <div className="border-t border-paper-line">
+                <SeoPanel
+                  title={form.seo.metaTitle || form.title}
+                  content={form.content}
+                  slug={form.slug}
+                  seo={form.seo}
+                  onSeoChange={(seo) => setForm((f) => ({ ...f, seo }))}
+                />
+              </div>
+            </details>
+
+            {/* Schema Markup */}
+            <details className="mb-8 group bg-paper-card rounded-2xl border border-paper-line shadow-card overflow-hidden">
+              <summary className="cursor-pointer px-5 py-4 font-display text-sm font-semibold text-ink outline-none select-none flex items-center justify-between">
+                Schema Markup
+                <ChevronDown size={16} className="text-muted transition-transform group-open:rotate-180" />
+              </summary>
+              <div className="border-t border-paper-line">
+                <SchemaMarkupPanel entries={form.schemaMarkup} onChange={(schemaMarkup) => setForm((f) => ({ ...f, schemaMarkup }))} />
+              </div>
+            </details>
           </div>
         </div>
 
@@ -387,17 +444,6 @@ export default function BlogEditorPage() {
               <TagInput tags={form.tags} onChange={(tags) => setForm((f) => ({ ...f, tags }))} />
             </div>
 
-            {/* SEO Panel */}
-            <SeoPanel
-              title={form.seo.metaTitle || form.title}
-              content={form.content}
-              slug={form.slug}
-              seo={form.seo}
-              onSeoChange={(seo) => setForm((f) => ({ ...f, seo }))}
-            />
-
-            {/* Schema Markup */}
-            <SchemaMarkupPanel entries={form.schemaMarkup} onChange={(schemaMarkup) => setForm((f) => ({ ...f, schemaMarkup }))} />
           </div>
         </aside>
       </div>

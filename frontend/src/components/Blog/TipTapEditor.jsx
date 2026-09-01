@@ -266,9 +266,39 @@ export default function TipTapEditor({ value, onChange, placeholder = "Write you
   const insertTable = () => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run();
   const inTable = editor.isActive("table");
 
+  // Pretty-print HTML:
+  // - h1-h6 and p stay as ONE complete line  e.g.  <h2>Title</h2>
+  // - container tags (ul, ol, li, table, etc.) each get their own line
+  // - no double blank lines between blocks
+  const formatHTML = (html) => {
+    if (!html) return "";
+
+    // Step 1: normalise — collapse all existing whitespace/newlines to single spaces
+    let out = html.replace(/\s*\n\s*/g, " ").replace(/\s{2,}/g, " ").trim();
+
+    // Step 2: single-line tags — h1-h6, p  → newline BEFORE opening, nothing extra inside
+    const singleLine = "p|h[1-6]|blockquote|pre|hr";
+    const slRx = new RegExp(`(<(?:${singleLine})[^>]*>[\\s\\S]*?</(?:${singleLine})>)`, "gi");
+    out = out.replace(slRx, "\n$1");
+
+    // Step 3: container tags — ul, ol, li, table rows/cells get their own lines
+    const container = "ul|ol|li|div|figure|table|thead|tbody|tr|td|th|figcaption";
+    const openRx  = new RegExp(`(<(?:${container})[^>]*>)`, "gi");
+    const closeRx = new RegExp(`(<\/(?:${container})>)`, "gi");
+    out = out
+      .replace(openRx,  "\n$1")
+      .replace(closeRx, "$1\n");
+
+    // Step 4: tidy — collapse 2+ blank lines into one, trim edges
+    return out
+      .replace(/\n{2,}/g, "\n")
+      .replace(/^\n+/, "")
+      .trim();
+  };
+
   const toggleCodeView = () => {
     if (!codeView) {
-      setCodeDraft(editor.getHTML());
+      setCodeDraft(formatHTML(editor.getHTML()));
       setCodeView(true);
     } else {
       editor.commands.setContent(codeDraft || "", true);
@@ -393,11 +423,17 @@ export default function TipTapEditor({ value, onChange, placeholder = "Write you
           spellCheck={false}
           rows={16}
           placeholder="<p>Post HTML...</p>"
-          className={`w-full resize-y bg-ink px-4 py-3 font-mono text-xs text-white placeholder:text-white/30 focus:outline-none ${isFullscreen ? "flex-1" : ""}`}
+          className={`w-full resize-y bg-ink px-5 py-4 font-mono text-sm leading-relaxed text-white placeholder:text-white/30 focus:outline-none ${isFullscreen ? "flex-1" : ""}`}
         />
       ) : (
-        <div className={fullHeight || isFullscreen ? "flex-1 overflow-y-auto" : ""}>
-          <EditorContent editor={editor} />
+        <div className={`flex flex-col ${fullHeight || isFullscreen ? "flex-1 overflow-hidden" : ""}`}>
+          <div className={fullHeight || isFullscreen ? "flex-1 overflow-y-auto" : ""}>
+            <EditorContent editor={editor} />
+          </div>
+          <div className="flex items-center justify-between border-t border-paper-line bg-paper px-3 py-1.5 text-[10px] uppercase tracking-wider text-muted font-semibold">
+            <span>{editor ? editor.getText().trim().split(/\s+/).filter(Boolean).length : 0} words</span>
+            {isFullscreen && <span>Press ESC to exit</span>}
+          </div>
         </div>
       )}
     </div>

@@ -34,11 +34,12 @@ export default function SeoPanel({ title, content, slug, seo, onSeoChange }) {
       <div className="space-y-3">
         <div>
           <label className="mb-1 block text-xs font-medium text-muted">Focus keyword</label>
-          <input
+          <textarea
             value={seo.focusKeyword || ""}
             onChange={set("focusKeyword")}
+            rows={2}
             placeholder="e.g. coffee brewing"
-            className="w-full rounded-lg border border-paper-line bg-paper px-3 py-2 text-sm text-ink focus:border-signal"
+            className="w-full resize-none rounded-lg border border-paper-line bg-paper px-3 py-2 text-sm text-ink focus:border-signal"
           />
         </div>
         <div>
@@ -46,12 +47,13 @@ export default function SeoPanel({ title, content, slug, seo, onSeoChange }) {
             <label className="text-xs font-medium text-muted">Meta title</label>
             <span className="text-[10px] text-muted">{(seo.metaTitle || "").length}/70</span>
           </div>
-          <input
+          <textarea
             value={seo.metaTitle || ""}
             onChange={set("metaTitle")}
             maxLength={70}
+            rows={2}
             placeholder="Defaults to the post title"
-            className="w-full rounded-lg border border-paper-line bg-paper px-3 py-2 text-sm text-ink focus:border-signal"
+            className="w-full resize-none rounded-lg border border-paper-line bg-paper px-3 py-2 text-sm text-ink focus:border-signal"
           />
         </div>
         <div>

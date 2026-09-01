@@ -87,6 +87,7 @@ const SECTIONS = [
       { key: "namePlaceholder", label: "Name placeholder" },
       { key: "emailPlaceholder", label: "Email placeholder" },
       { key: "companyPlaceholder", label: "Company placeholder" },
+      { key: "phonePlaceholder", label: "Phone placeholder" },
       { key: "renewalLabel", label: "Renewal question", long: true },
       { key: "renewalPlaceholder", label: "Renewal placeholder" },
     ],

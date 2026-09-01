@@ -59,6 +59,7 @@ const licensingContentSchema = new mongoose.Schema(
       namePlaceholder: String,
       emailPlaceholder: String,
       companyPlaceholder: String,
+      phonePlaceholder: String,
       renewalLabel: String,
       renewalPlaceholder: String,
     },

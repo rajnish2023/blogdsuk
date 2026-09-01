@@ -17,9 +17,3 @@ currencySchema.statics.active = function () {
 };
 
 module.exports = mongoose.model("Currency", currencySchema);
-
-module.exports = mnogoose.model("currency", currencySchema);
-
-currencyiSchema.statics.active = function () {
-  return this.find({ status: "1"})
-}

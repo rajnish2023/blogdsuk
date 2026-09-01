@@ -127,6 +127,11 @@ const resolveDefaultCurrency = (pricing, req) => {
   return entries.find((p) => p.isDefault)?.code || entries[0]?.code || "USD";
 };
 
+const orderedCurrencies = (pricing) =>
+  [...CURRENCY_CODES].sort(
+    (a, b) => (pricing[b]?.isDefault ? 1 : 0) - (pricing[a]?.isDefault ? 1 : 0)
+  );
+
 const resolveCurrency = (value, fallback = "USD") =>
   CURRENCY_CODES.includes(String(value || "").toUpperCase()) ? String(value).toUpperCase() : fallback;
 
@@ -281,7 +286,15 @@ const groupCapabilities = (cat) =>
     collapsible: (cat.collapsible || []).includes(group),
     group: (cat.capabilities || [])
       .filter((c) => c.group === group)
-      .map(({ id, label, note, tier }) => ({ id, label, note, tier })),
+   
+      .map(({ id, label, note, tier, fo, app }) => ({
+        id,
+        label,
+        note,
+        tier,
+        ...(fo ? { fo } : {}),
+        ...(app ? { app } : {}),
+      })),
   }));
 
 const buildSections = (content) => {
@@ -362,7 +375,7 @@ exports.getCatalog = async (req, res) => {
       gated,
       content: copy,
       pricing: gated ? stripRates(pricing) : pricing,
-      currencies: CURRENCY_CODES,
+      currencies: orderedCurrencies(pricing),
       defaultCurrency: resolveDefaultCurrency(pricing, req),
       // Admin-managed, read live from the database. Grouped rather than flat so
       // the client renders straight from it with nothing to join.
@@ -702,7 +715,7 @@ exports.deleteLead = async (req, res) => {
 exports.listPricing = async (req, res) => {
   try {
     const pricing = await loadPricing();
-    res.json({ pricing, currencies: CURRENCY_CODES, defaults: DEFAULT_PRICING });
+    res.json({ pricing, currencies: orderedCurrencies(pricing), defaults: DEFAULT_PRICING });
   } catch (err) {
     console.error("[licensing] listPricing error:", err);
     res.status(500).json({ message: "Failed to load licence pricing" });

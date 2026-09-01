@@ -17,7 +17,7 @@ export default function LicenceRateCard({ source = "licence-rate-card" }) {
   const [teamUsers, setTeamUsers] = useState(0);
   const [deviceUsers, setDeviceUsers] = useState(0);
   const [activityUsers, setActivityUsers] = useState(0);
-  const [lead, setLead] = useState({ name: "", email: "", company: "", renewal: "" });
+  const [lead, setLead] = useState({ name: "", email: "", company: "", phone: "", renewal: "" });
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState("");
   const [sent, setSent] = useState(false);
@@ -401,6 +401,13 @@ export default function LicenceRateCard({ source = "licence-rate-card" }) {
                   placeholder={C.form.companyPlaceholder}
                   value={lead.company}
                   onChange={(e) => setLead({ ...lead, company: e.target.value })}
+                />
+                <input
+                  className="inp"
+                  type="tel"
+                  placeholder={C.form.phonePlaceholder}
+                  value={lead.phone}
+                  onChange={(e) => setLead({ ...lead, phone: e.target.value })}
                 />
                 <label className="inp-label" htmlFor="rc-renewal">
                   {C.form.renewalLabel}

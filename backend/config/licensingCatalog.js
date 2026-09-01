@@ -185,6 +185,7 @@ const DEFAULT_CONTENT = {
     namePlaceholder: "Full name",
     emailPlaceholder: "Work email",
     companyPlaceholder: "Company",
+    phonePlaceholder: "Phone (optional)",
     renewalLabel: "If you already run Dynamics, when does your subscription renew?",
     renewalPlaceholder: "e.g. March 2027",
   },

@@ -45,6 +45,7 @@ function RateInput({ symbol, value, onChange, label, hint }) {
 
 export default function PricingEditor({ canEdit, onToast }) {
   const [pricing, setPricing] = useState(null);
+  const [currencies, setCurrencies] = useState([]);
   const [active, setActive] = useState("USD");
   const [draft, setDraft] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -55,6 +56,7 @@ export default function PricingEditor({ canEdit, onToast }) {
     try {
       const data = await fetchLicensingPricing();
       setPricing(data.pricing);
+      setCurrencies(data.currencies || []);
       setActive((prev) => (data.pricing[prev] ? prev : data.currencies[0]));
     } catch (err) {
       onToast(err?.response?.data?.message || "Failed to load pricing", "error");
@@ -127,7 +129,7 @@ export default function PricingEditor({ canEdit, onToast }) {
     <div className="px-8 py-6">
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2">
-          {Object.keys(pricing).map((c) => (
+          {(currencies.length ? currencies : Object.keys(pricing)).map((c) => (
             <button
               key={c}
               onClick={() => setActive(c)}

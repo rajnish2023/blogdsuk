@@ -7,6 +7,8 @@ const LicensingGroup = require("../models/LicensingGroup");
 const LicensingContent = require("../models/LicensingContent");
 const { calculate, buildLockedModel, buildSalesPayload, fmt } = require("../utils/licensingEngine");
 const { sendEmail } = require("../utils/mailer");
+const { sendTemplate } = require("../utils/mailPortal");
+const { buildLicensingMailFields } = require("../utils/licensingMailPayload");
 const {
   DEFAULT_PRICING,
   CURRENCY_CODES,
@@ -555,6 +557,26 @@ exports.submitLead = async (req, res) => {
     }).catch((mailErr) => {
       console.error("[licensing] notification email failed:", mailErr.message);
     });
+    (async () => {
+      try {
+        const capDocs = await LicensingCapability.find({ capId: { $in: lead.capabilities || [] } })
+          .select("capId label group tier")
+          .lean();
+        const details = (lead.capabilities || []).map((id) => {
+          const d = capDocs.find((c) => c.capId === id);
+          return d ? { id, label: d.label, group: d.group, tier: d.tier } : { id, label: id, group: "Other" };
+        });
+
+        const fields = buildLicensingMailFields({ lead, model, details, source, internalTo: adminEmail });
+
+        await Promise.all([
+          sendTemplate("licensingInternal", fields.internal),
+          sendTemplate("licensingCustomer", fields.customer),
+        ]);
+      } catch (err) {
+        console.error("[licensing] mail portal send failed:", err.message);
+      }
+    })();
 
     res.status(201).json({
       message: "Thank you! Your breakdown is on its way.",

@@ -341,6 +341,73 @@ exports.getBlogsByAuthor = async (req, res) => {
   }
 };
 
+// 11. Get all unique tags and their counts
+exports.getTagsList = async (req, res) => {
+  try {
+    const tags = await Blog.aggregate([
+      { $match: { status: "published" } },
+      { $unwind: "$tags" },
+      // Group case-insensitively to avoid duplicates like "ERP" and "erp"
+      { $group: { _id: { $toLower: "$tags" }, original: { $first: "$tags" }, count: { $sum: 1 } } },
+      { $sort: { count: -1, _id: 1 } }
+    ]);
+
+    const formattedTags = tags.map(t => ({
+      name: t.original,
+      count: t.count,
+      slug: t.original.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '')
+    }));
+
+    res.json(formattedTags);
+  } catch (err) {
+    console.error("getTagsList error:", err);
+    res.status(500).json({ message: "Error fetching tags" });
+  }
+};
+
+// 12. Get Blogs by Tag Slug
+exports.getBlogsByTag = async (req, res) => {
+  try {
+    const tagSlug = req.params.tagSlug;
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.max(1, Math.min(100, parseInt(req.query.limit) || 10));
+    const skip = (page - 1) * limit;
+
+    // Convert slug (e.g. "erp-software") to a regex that matches "ERP Software", "erp-software", etc.
+    const searchRegex = new RegExp('^' + tagSlug.replace(/-/g, '[-\\s]') + '$', 'i');
+
+    const query = { 
+      status: "published",
+      tags: { $regex: searchRegex }
+    };
+
+    const [blogs, totalDocs] = await Promise.all([
+      Blog.find(query)
+        .select("title slug excerpt featuredImage readingTimeMinutes publishedAt updatedAt tags")
+        .sort({ publishedAt: -1, createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .populate("category", "name slug")
+        .populate("author", "name authorSlug")
+        .lean(),
+      Blog.countDocuments(query),
+    ]);
+
+    res.json({
+      blogs,
+      pagination: {
+        page,
+        limit,
+        totalPages: Math.ceil(totalDocs / limit),
+        totalBlogs: totalDocs,
+      },
+    });
+  } catch (err) {
+    console.error("getBlogsByTag error:", err);
+    res.status(500).json({ message: "Error fetching blogs by tag" });
+  }
+};
+
 // 6a. Get All Authors
 exports.listPublicAuthors = async (req, res) => {
   try {

@@ -13,6 +13,8 @@ const {
   getBlogsByCategory,
   listPublicAuthors,
   getBlogsByAuthor,
+  getTagsList,
+  getBlogsByTag,
 } = require("../controllers/publicBlogController");
  
 router.use(apiLimiter);
@@ -25,8 +27,10 @@ router.get("/trending", getTrendingBlogs);
 router.get("/random", getRandomBlogs);
 router.get("/categories", listPublicCategories);
 router.get("/authors", listPublicAuthors);
+router.get("/tags", getTagsList);
 router.get("/slug/:slug", getPublicBlogBySlug);
 router.get("/category/:categorySlug", getBlogsByCategory);
 router.get("/author/:authorSlug", getBlogsByAuthor);
+router.get("/tag/:tagSlug", getBlogsByTag);
 
 module.exports = router;

@@ -103,7 +103,31 @@ exports.getPublicBlogBySlug = async (req, res) => {
   }
 };
 
-// 2a. Get Latest Blog
+// 2a. Get Blog Preview by Slug (Allows viewing Drafts)
+exports.getPublicBlogPreviewBySlug = async (req, res) => {
+  try {
+    const { slug } = req.params;
+    if (!slug) {
+      return res.status(400).json({ message: "Valid slug is required" });
+    }
+
+    const blog = await Blog.findOne({ slug: slug.trim() })
+      .populate("category", SAFE_CATEGORY_FIELDS)
+      .populate("author", SAFE_AUTHOR_FIELDS)
+      .lean();
+
+    if (!blog) {
+      return res.status(404).json({ message: "Blog post not found" });
+    }
+
+    res.status(200).json(blog);
+  } catch (err) {
+    console.error("getPublicBlogPreviewById error:", err);
+    res.status(500).json({ message: "Error fetching blog preview" });
+  }
+};
+
+// 2b. Get Latest Blog
 exports.getLatestBlog = async (req, res) => {
   try {
     const blog = await Blog.findOne({ status: "published" })

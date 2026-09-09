@@ -2,7 +2,7 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
 import {
   ArrowLeft, Loader2, Save, Send, Pencil, ChevronRight, ChevronDown,
-  PanelRightClose, PanelRightOpen, CheckCircle2, CloudOff,
+  PanelRightClose, PanelRightOpen, CheckCircle2, CloudOff, Eye
 } from "lucide-react";
 import TipTapEditor from "../components/Blog/TipTapEditor";
 import SeoPanel from "../components/Blog/SeoPanel";
@@ -16,7 +16,7 @@ import { fetchBlog, createBlog, updateBlog, setBlogStatus } from "../api/blogApi
 import { fetchCategories } from "../api/categoryApi";
 import { fetchAuthors } from "../api/userApi";
 import { slugify } from "../utils/slugify";
-import { usePermissions } from "../auth/AuthContext";
+import { usePermissions, useAuth } from "../auth/AuthContext";
 
 const emptySeo = { metaTitle: "", metaDescription: "", focusKeyword: "" };
 
@@ -24,6 +24,7 @@ export default function BlogEditorPage() {
   const { id } = useParams();
   const isEdit = !!id;
   const navigate = useNavigate();
+  const { user } = useAuth();
   const can = usePermissions();
   const canPublish = can("blog:publish");
   const canReassignAuthor = can("blog:edit");
@@ -56,7 +57,7 @@ export default function BlogEditorPage() {
     category: "",
     tags: [],
     featuredImage: null,
-    author: "",
+    author: user?.id || user?._id || "",
     schemaMarkup: [],
     faqs: [],
     seo: emptySeo,
@@ -277,6 +278,20 @@ export default function BlogEditorPage() {
           >
             {sidebarOpen ? <PanelRightClose size={16} /> : <PanelRightOpen size={16} />}
           </button>
+          
+          {/* Preview Button: Only show if it's saved (isEdit) and status is draft */}
+          {isEdit && status === "draft" && (
+            <a
+              href={`${"https://www.dynamicssquare.co.uk"}/blog/preview/${form.slug}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn-secondary text-xs flex items-center gap-1"
+            >
+              <Eye size={14} />
+              Preview
+            </a>
+          )}
+
           <button onClick={() => handleSave("draft")} disabled={saving} className="btn-secondary text-xs disabled:opacity-60">
             {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
             Save draft

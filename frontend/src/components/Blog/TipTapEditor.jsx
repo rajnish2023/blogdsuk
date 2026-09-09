@@ -1,4 +1,5 @@
 import { useEditor, EditorContent } from "@tiptap/react";
+import { Node, mergeAttributes } from "@tiptap/core";
 import StarterKit from "@tiptap/starter-kit";
 import Underline from "@tiptap/extension-underline";
 import Link from "@tiptap/extension-link";
@@ -18,6 +19,34 @@ import {
   Maximize, Minimize,
 } from "lucide-react";
 import { uploadMedia } from "../../api/galleryApi";
+
+/* ── Generic HTML Handlers for TipTap ── */
+// TipTap normally strips unknown tags like <div> or <span>. These generic extensions
+// teach it to accept them so your custom CTA blocks don't disappear in visual mode.
+const GenericBlock = Node.create({
+  name: "genericBlock",
+  group: "block",
+  content: "block+", // allows paragraphs, headings, etc. inside
+  parseHTML() {
+    return [{ tag: "div" }, { tag: "section" }, { tag: "article" }, { tag: "aside" }, { tag: "figure" }, { tag: "figcaption" }];
+  },
+  renderHTML({ HTMLAttributes }) {
+    return ["div", mergeAttributes(HTMLAttributes), 0];
+  },
+});
+
+const GenericInline = Node.create({
+  name: "genericInline",
+  group: "inline",
+  inline: true,
+  content: "inline*",
+  parseHTML() {
+    return [{ tag: "span" }];
+  },
+  renderHTML({ HTMLAttributes }) {
+    return ["span", mergeAttributes(HTMLAttributes), 0];
+  },
+});
 
 /* ── Paste sanitizer: strips all inline styles, classes, and Word junk ── */
 function sanitizePastedHTML(html) {
@@ -162,6 +191,7 @@ function HeadingDropdown({ editor, disabled }) {
 
 export default function TipTapEditor({ value, onChange, placeholder = "Write your post...", variant = "default", fullHeight = false }) {
   const fileInputRef = useRef(null);
+  const rawHtmlRef = useRef(null); // stores last raw code-view HTML as source of truth
   const [uploading, setUploading] = useState(false);
   const [codeView, setCodeView] = useState(false);
   const [codeDraft, setCodeDraft] = useState("");
@@ -195,9 +225,44 @@ export default function TipTapEditor({ value, onChange, placeholder = "Write you
             TableCell,
           ]),
       Placeholder.configure({ placeholder }),
+      GenericBlock,
+      GenericInline,
+
+      // ── Preserve inline style="" on ALL elements ──────────────────────
+      // By default TipTap strips any attribute it doesn't know about.
+      // This global extension tells TipTap to keep style="" everywhere.
+      {
+        name: "globalStyle",
+        addGlobalAttributes() {
+          return [
+            {
+              types: [
+                "paragraph", "heading", "bulletList", "orderedList", "listItem",
+                "blockquote", "codeBlock", "image", "table", "tableRow",
+                "tableCell", "tableHeader", "genericBlock", "genericInline", "link", "textStyle"
+              ],
+              attributes: {
+                style: {
+                  default: null,
+                  parseHTML: (el) => el.getAttribute("style") || null,
+                  renderHTML: (attrs) => attrs.style ? { style: attrs.style } : {},
+                },
+                class: {
+                  default: null,
+                  parseHTML: (el) => el.getAttribute("class") || null,
+                  renderHTML: (attrs) => attrs.class ? { class: attrs.class } : {},
+                },
+              },
+            },
+          ];
+        },
+      },
     ],
     content: value || "",
-    onUpdate: ({ editor: ed }) => onChange?.(ed.getHTML()),
+    onUpdate: ({ editor: ed }) => {
+      rawHtmlRef.current = null; // user edited in visual mode → code view should reflect that
+      onChange?.(ed.getHTML());
+    },
     editorProps: {
       attributes: {
         class: `tiptap-content px-4 py-3 focus:outline-none ${isMinimal ? "min-h-[80px]" : fullHeight || isFullscreen ? "min-h-[400px]" : "min-h-[260px]"}`,
@@ -214,6 +279,11 @@ export default function TipTapEditor({ value, onChange, placeholder = "Write you
     const current = editor.getHTML();
     if (value !== undefined && value !== current) {
       editor.commands.setContent(value || "", false);
+      if (rawHtmlRef.current === null) {
+        // Initialize the raw HTML reference with the actual database value
+        // so if the user opens code view before editing, they see the real HTML
+        rawHtmlRef.current = value;
+      }
     }
   }, [value, editor, codeView]);
 
@@ -298,11 +368,22 @@ export default function TipTapEditor({ value, onChange, placeholder = "Write you
 
   const toggleCodeView = () => {
     if (!codeView) {
-      setCodeDraft(formatHTML(editor.getHTML()));
+      // Entering code view:
+      // If the user previously saved raw HTML from code view, show THAT — not
+      // TipTap's mangled reconstruction of it (which strips divs/styles etc.)
+      const source = rawHtmlRef.current !== null ? rawHtmlRef.current : editor.getHTML();
+      setCodeDraft(formatHTML(source));
+      rawHtmlRef.current = null; // will be re-set when they exit code view
       setCodeView(true);
     } else {
-      editor.commands.setContent(codeDraft || "", true);
-      onChange?.(editor.getHTML());
+      // Exiting code view:
+      // 1. Store the raw code as the authoritative HTML for the next code-view open
+      rawHtmlRef.current = codeDraft;
+      // 2. Tell the parent form about the raw HTML (what will actually be saved)
+      onChange?.(codeDraft);
+      // 3. Load a simplified version into TipTap just for visual editing display
+      //    (TipTap will strip divs etc. — that's unavoidable — but the saved value is correct)
+      editor.commands.setContent(codeDraft || "", false);
       setCodeView(false);
     }
   };
@@ -419,7 +500,10 @@ export default function TipTapEditor({ value, onChange, placeholder = "Write you
       {codeView ? (
         <textarea
           value={codeDraft}
-          onChange={(e) => setCodeDraft(e.target.value)}
+          onChange={(e) => {
+            setCodeDraft(e.target.value);
+            onChange?.(e.target.value);
+          }}
           spellCheck={false}
           rows={16}
           placeholder="<p>Post HTML...</p>"

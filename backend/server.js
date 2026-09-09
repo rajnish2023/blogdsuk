@@ -33,13 +33,23 @@ const app = express();
 
 connectDB();
  
-app.set("trust proxy", true);  
+app.set("trust proxy", 1);  
  
 app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } }));
 app.use(
   cors({
-    origin: process.env.CLIENT_URL || "http://localhost:5173",
-    credentials: true, 
+    origin: (origin, callback) => {
+      const allowed = [
+        process.env.CLIENT_URL,
+        "http://localhost:5173",
+        "http://localhost:3000",
+        "https://www.dynamicssquare.co.uk"
+      ].filter(Boolean);
+      // Allow requests with no origin (e.g. mobile apps, curl, Postman)
+      if (!origin || allowed.includes(origin)) return callback(null, true);
+      callback(new Error(`CORS blocked: ${origin}`));
+    },
+    credentials: true,
   })
 );
 app.use(cookieParser());

@@ -92,15 +92,20 @@ const resolveVerdict = (rawInput, ctx) => {
   };
 };
 
-/* Everything a gated visitor is allowed to see: the verdict, nothing priced. */
 const buildLockedModel = (rawInput, ctx) => {
-  const v = resolveVerdict(rawInput, ctx);
+  const cx = makeCtx(ctx);
+  const v = resolveVerdict(rawInput, cx);
+  const foMinimumApplied =
+    v.platform === "fo" && v.input.fullUsers > 0 && v.input.fullUsers < cx.foMinSeats;
   return {
     gated: true,
     input: v.input,
     platform: v.platform,
     platformLabel: v.platformLabel,
     tier: v.platform === "bc" ? v.tier : null,
+    foMinSeats: cx.foMinSeats,
+    foMinimumApplied,
+    billedFullUsers: foMinimumApplied ? cx.foMinSeats : v.input.fullUsers,
   };
 };
 

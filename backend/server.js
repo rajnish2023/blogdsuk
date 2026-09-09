@@ -43,6 +43,7 @@ app.use(
         process.env.CLIENT_URL,
         "http://localhost:5173",
         "http://localhost:3000",
+        "https://www.dynamicssquare.co.uk"
       ].filter(Boolean);
       // Allow requests with no origin (e.g. mobile apps, curl, Postman)
       if (!origin || allowed.includes(origin)) return callback(null, true);

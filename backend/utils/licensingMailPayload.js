@@ -61,45 +61,56 @@ const capabilitiesHtml = (details = []) => {
 const statementRowsBranded = (model) => {
   const rows = (model.lines || [])
     .map(
-      (l) => `
-                                <tr>
-                                    <td style="padding:14px 16px;border-top:1px solid #F0EFF3;font-size:13px;color:#393053;">
-                                        <strong>${l.qty} &times; ${esc(l.label)}</strong><br>
-                                        <span style="font-size:12px;color:#6E6E7A;">${esc(l.sub || "")}</span>
-                                    </td>
-                                    <td style="padding:14px 16px;border-top:1px solid #F0EFF3;font-size:13px;color:#393053;text-align:right;vertical-align:top;">
-                                        ${esc(model.symbol)}${fmt(l.total)}</td>
-                                </tr>`
+      (l) => `<tr>
+<td style="padding:14px 16px;border-top:1px solid #F0EFF3;font-size:13px;color:#393053;"><strong>${l.qty} &times; ${esc(
+        l.label
+      )}</strong><br><span style="font-size:12px;color:#6E6E7A;">${esc(l.sub || "")}</span></td>
+<td style="padding:14px 16px;border-top:1px solid #F0EFF3;font-size:13px;color:#393053;text-align:right;vertical-align:top;">${esc(
+        model.symbol
+      )}${fmt(l.total)}</td>
+</tr>`
     )
     .join("");
 
-  return (
+  const body =
     rows ||
-    `<tr><td colspan="2" style="padding:14px 16px;border-top:1px solid #F0EFF3;font-size:13px;color:#6E6E7A;">No user licences selected.</td></tr>`
-  );
+    `<tr><td colspan="2" style="padding:14px 16px;border-top:1px solid #F0EFF3;font-size:13px;color:#6E6E7A;">No user licences selected.</td></tr>`;
+
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #F0EFF3;border-radius:8px;border-collapse:separate;">
+<tr style="background-color:#F1F0F4;">
+<td style="padding:10px 16px;font-size:12px;font-weight:600;color:#444444;">Licence</td>
+<td style="padding:10px 16px;font-size:12px;font-weight:600;color:#444444;text-align:right;">Monthly cost</td>
+</tr>
+${body}
+</table>`;
 };
 
 const capabilityRowsBranded = (details = []) => {
-  if (!details.length) {
-    return `<tr><td style="padding:6px 0;font-size:13px;color:#6E6E7A;">No capabilities selected.</td></tr>`;
-  }
   const byGroup = details.reduce((acc, c) => {
     (acc[c.group || "Other"] ||= []).push(c);
     return acc;
   }, {});
-  return Object.entries(byGroup)
+
+  const rows = Object.entries(byGroup)
     .map(
-      ([group, items]) => `
-                                <tr>
-                                    <td style="padding:6px 0;font-size:13px;color:#444444;vertical-align:top;width:40%;"><strong style="color:#393053;">${esc(
-                                      group
-                                    )}</strong></td>
-                                    <td style="padding:6px 0;font-size:13px;color:#444444;">${items
-                                      .map((i) => esc(i.label))
-                                      .join(", ")}</td>
-                                </tr>`
+      ([group, items]) => `<tr>
+<td width="40%" style="padding:6px 12px 6px 0;font-size:13px;color:#444444;vertical-align:top;"><strong style="color:#393053;">${esc(
+        group
+      )}</strong></td>
+<td width="60%" style="padding:6px 0;font-size:13px;color:#444444;vertical-align:top;">${items
+        .map((i) => esc(i.label))
+        .join(", ")}</td>
+</tr>`
     )
     .join("");
+
+  const body =
+    rows ||
+    `<tr><td style="padding:6px 0;font-size:13px;color:#6E6E7A;">No capabilities selected.</td></tr>`;
+
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="table-layout:fixed;">
+${body}
+</table>`;
 };
 
 const buildLicensingMailFields = ({ lead, model, details = [], source, internalTo }) => {

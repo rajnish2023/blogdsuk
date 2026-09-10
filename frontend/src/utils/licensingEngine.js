@@ -37,10 +37,17 @@ export function resolveVerdict(catalog, input) {
   const platform = beyondDrivers.length || scaleEscalation.length ? "fo" : "bc";
   const tier = premiumDrivers.length ? "premium" : "essentials";
 
+  const foMinSeats = catalog?.foMinSeats ?? 20;
+  const foMinimumApplied = platform === "fo" && fullUsers > 0 && fullUsers < foMinSeats;
+  const billedFullUsers = foMinimumApplied ? foMinSeats : fullUsers;
+
   return {
     gated: true,
     platform,
     tier: platform === "bc" ? tier : null,
+    foMinSeats,
+    foMinimumApplied,
+    billedFullUsers,
     platformLabel:
       platform === "fo"
         ? "Finance & Operations"

@@ -82,11 +82,10 @@ exports.getPublicBlogBySlug = async (req, res) => {
       return res.status(400).json({ message: "Valid slug is required" });
     }
 
- 
     const blog = await Blog.findOneAndUpdate(
       { slug: slug.trim(), status: "published" },
       { $inc: { views: 1 } },
-      { new: true }
+      { new: true, timestamps: false }
     )
       .populate("category", SAFE_CATEGORY_FIELDS)
       .populate("author", SAFE_AUTHOR_FIELDS)

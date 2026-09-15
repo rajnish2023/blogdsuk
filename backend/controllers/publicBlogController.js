@@ -55,6 +55,7 @@ exports.listPublicBlogs = async (req, res) => {
         .limit(limit)
         .populate("category", "name slug")
         .populate("author", "name authorSlug")
+        .populate("reviewedBy", "name authorSlug")
         .lean(),
       Blog.countDocuments(query),
     ]);
@@ -89,6 +90,7 @@ exports.getPublicBlogBySlug = async (req, res) => {
     )
       .populate("category", SAFE_CATEGORY_FIELDS)
       .populate("author", SAFE_AUTHOR_FIELDS)
+      .populate("reviewedBy", SAFE_AUTHOR_FIELDS)
       .lean();
 
     if (!blog) {
@@ -113,6 +115,7 @@ exports.getPublicBlogPreviewBySlug = async (req, res) => {
     const blog = await Blog.findOne({ slug: slug.trim() })
       .populate("category", SAFE_CATEGORY_FIELDS)
       .populate("author", SAFE_AUTHOR_FIELDS)
+      .populate("reviewedBy", SAFE_AUTHOR_FIELDS)
       .lean();
 
     if (!blog) {
@@ -133,6 +136,7 @@ exports.getLatestBlog = async (req, res) => {
       .sort({ publishedAt: -1, createdAt: -1 })
       .populate("category", SAFE_CATEGORY_FIELDS)
       .populate("author", SAFE_AUTHOR_FIELDS)
+      .populate("reviewedBy", SAFE_AUTHOR_FIELDS)
       .lean();
 
     if (!blog) {
@@ -184,6 +188,7 @@ exports.getArchiveBlogs = async (req, res) => {
         .limit(limit)
         .populate("category", "name slug")
         .populate("author", "name authorSlug")
+        .populate("reviewedBy", "name authorSlug")
         .lean(),
       Blog.countDocuments(query),
     ]);
@@ -288,6 +293,7 @@ exports.getBlogsByCategory = async (req, res) => {
         .limit(limit)
         .populate("category", "name slug")
         .populate("author", "name authorSlug")
+        .populate("reviewedBy", "name authorSlug")
         .lean(),
       Blog.countDocuments(query),
     ]);
@@ -344,6 +350,7 @@ exports.getBlogsByAuthor = async (req, res) => {
         .limit(limit)
         .populate("category", "name slug")
         .populate("author", "name authorSlug")
+        .populate("reviewedBy", "name authorSlug")
         .lean(),
       Blog.countDocuments(query),
     ]);
